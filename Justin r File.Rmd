@@ -1,0 +1,76 @@
+---
+title: "6372 Auto Project"
+author: "Justin Ehly"
+date: "1/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+### Libraries ###
+library(car)
+library(magrittr)
+library(tibble)
+library(dplyr)
+```
+
+```{r data}
+### Download Data and Clean ###
+autos <- read.csv("data1.csv")
+view(autos)
+
+
+##### Look for any NAs in the data set ####
+sapply(autos, function(x) sum(is.na(x)))
+
+# Missing 69 values for HP, 30 for Engine Cylinders, 6 for # of doors
+missingHP <- which (is.na(autos$Engine.HP))
+write.csv(autos[missingHP$x,],"MissingHP.csv")
+
+#Fiat 500e - electric so no cylinders
+autos <- autos %>% mutate(Engine.HP = replace(Engine.HP, Model == "500e",111)) 
+
+#2017 Continental
+autos[c(2906:2909)]
+autos$Engine.HP[c(2906:2909)] <- 400 
+
+#2015 Impala duel-fuel
+autos[c(5826,5831, 5832, 5834, 5840, 5841),]
+autos$Engine.HP[c(5826,5831,5832,5834,5840, 5841)] <- "260(gas)/ 230(CNG) "
+
+#2017 Escape
+autos[c(4204:4207),]
+autos$Engine.HP[c(4204:4207)] <- 179 
+view(autos)
+
+#2013-2014 Fit EV
+autos[c(4706,4707),]
+autos$Engine.HP[c(4706,4707)] <- 123
+
+#2015 Ford Focus EV 143hp
+autos[c(4786,4790,4799),]
+autos$Engine.HP[c(4786,4790,4799)] <- 143
+
+#2005 Ford Freestar only vans above $29k have 201 HP
+autos[c(4915:4928),] %>% select(Engine.HP,highway.MPG, city.mpg, MSRP) %>% arrange(MSRP)
+autos[c(4915:4928),] %>% select(Engine.HP,highway.MPG, city.mpg, MSRP) %>% arrange(highway.MPG)
+autos$Engine.HP[c(4915:4918)] <- 193
+autos$Engine.HP[c(4919:4920)] <- 201
+
+# 2014 Mitsubishi i-MiEV
+autos$Engine.HP[5779] <- 66
+
+# 2015-2016 Kia Soul EV
+autos$Engine.HP[c(9851:9855)] <- 109
+
+#2013-2014 Toyota Rav4 EV
+autos$Engine.HP[c(8375:8376)] <- 154
+
+#Telsa Model s
+autos %>% filter(Model == "Model S") %>% arrange(Year,MSRP) %>% select(Year, Engine.HP,highway.MPG, city.mpg, MSRP)
+
+
+```
