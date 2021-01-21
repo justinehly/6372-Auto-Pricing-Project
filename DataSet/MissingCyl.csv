@@ -1,0 +1,31 @@
+"","Make","Model","Year","Engine.Fuel.Type","Engine.HP","Engine.Cylinders","Transmission.Type","Driven_Wheels","Number.of.Doors","Market.Category","Vehicle.Size","Vehicle.Style","highway.MPG","city.mpg","Popularity","MSRP"
+"1984","Chevrolet","Bolt EV",2017,"electric","200",NA,"DIRECT_DRIVE","front wheel drive",4,"Hatchback","Compact","4dr Hatchback",110,128,1385,40905
+"1985","Chevrolet","Bolt EV",2017,"electric","200",NA,"DIRECT_DRIVE","front wheel drive",4,"Hatchback","Compact","4dr Hatchback",110,128,1385,36620
+"3717","Volkswagen","e-Golf",2015,"electric","115",NA,"DIRECT_DRIVE","front wheel drive",4,"Hatchback","Compact","4dr Hatchback",105,126,873,33450
+"3718","Volkswagen","e-Golf",2015,"electric","115",NA,"DIRECT_DRIVE","front wheel drive",4,"Hatchback","Compact","4dr Hatchback",105,126,873,35445
+"3719","Volkswagen","e-Golf",2016,"electric","115",NA,"DIRECT_DRIVE","front wheel drive",4,"Hatchback","Compact","4dr Hatchback",105,126,873,28995
+"3720","Volkswagen","e-Golf",2016,"electric","115",NA,"DIRECT_DRIVE","front wheel drive",4,"Hatchback","Compact","4dr Hatchback",105,126,873,35595
+"5779","Mitsubishi","i-MiEV",2014,"electric","66",NA,"DIRECT_DRIVE","rear wheel drive",4,"Hatchback","Compact","4dr Hatchback",99,126,436,22995
+"5780","Mitsubishi","i-MiEV",2016,"electric","66",NA,"DIRECT_DRIVE","rear wheel drive",4,"Hatchback","Compact","4dr Hatchback",99,126,436,22995
+"5781","Mitsubishi","i-MiEV",2017,"electric","66",NA,"DIRECT_DRIVE","rear wheel drive",4,"Hatchback","Compact","4dr Hatchback",102,121,436,22995
+"8374","Toyota","RAV4 EV",2012,"electric","154",NA,"DIRECT_DRIVE","front wheel drive",4,"Crossover","Midsize","4dr SUV",74,78,2031,49800
+"8696","Mazda","RX-7",1993,"regular unleaded","255",NA,"MANUAL","rear wheel drive",2,"Factory Tuner,Performance","Compact","Coupe",23,15,586,7523
+"8697","Mazda","RX-7",1994,"regular unleaded","255",NA,"MANUAL","rear wheel drive",2,"Factory Tuner,Performance","Compact","Coupe",23,15,586,8147
+"8698","Mazda","RX-7",1995,"regular unleaded","255",NA,"MANUAL","rear wheel drive",2,"Factory Tuner,Performance","Compact","Coupe",23,15,586,8839
+"8699","Mazda","RX-8",2009,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,31930
+"8700","Mazda","RX-8",2009,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,26435
+"8701","Mazda","RX-8",2009,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,27860
+"8702","Mazda","RX-8",2009,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,31000
+"8703","Mazda","RX-8",2009,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,26435
+"8704","Mazda","RX-8",2009,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,31700
+"8705","Mazda","RX-8",2009,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,28560
+"8706","Mazda","RX-8",2010,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,32140
+"8707","Mazda","RX-8",2010,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,26645
+"8708","Mazda","RX-8",2010,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,32810
+"8709","Mazda","RX-8",2010,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,26645
+"8710","Mazda","RX-8",2010,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,32110
+"8711","Mazda","RX-8",2011,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,32960
+"8712","Mazda","RX-8",2011,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,32260
+"8713","Mazda","RX-8",2011,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,32290
+"8714","Mazda","RX-8",2011,"premium unleaded (required)","232",NA,"MANUAL","rear wheel drive",4,"Performance","Compact","Coupe",22,16,586,26795
+"8715","Mazda","RX-8",2011,"premium unleaded (required)","212",NA,"AUTOMATIC","rear wheel drive",4,"Performance","Compact","Coupe",23,16,586,26795
