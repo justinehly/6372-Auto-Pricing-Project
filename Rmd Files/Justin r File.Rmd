@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(car)
 library(magrittr)
 library(tibble)
+library(naniar)
 library(dplyr)
 ```
 
@@ -106,7 +107,6 @@ autos[which(is.na(autos$Number.of.Doors)),]
 # 2- door ferrari ff
 autos$Number.of.Doors[which(is.na(autos$Number.of.Doors))] <-2
 
-# and we look clean in terms of having a complete dataset
 
 summary(autos)
 str(autos)
@@ -114,5 +114,17 @@ str(autos)
 autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], as.factor)
 autos$Year <- as.factor(autos$Year) # make Year into a factor
 str(autos)
+sapply(autos, function(x) sum(is.na(x)))
+# Justin R just pointed out we have N/A's in the dataset 
+# as well that didn't show up in the sapply funciont
+
+sapply(autos, function(x) sum(x %in% common_na_strings))
+sapply(autos, function(x) sum(x %in% common_na_numbers))
+
+# Engine.Fuel.Type - suzuki is missing
+autos$Engine.Fuel.Type[c(11322-11324)] <- 'regular unleaded'
+
+# All that is left now is to either predict or imput the Market.Category
+
 
 ```
