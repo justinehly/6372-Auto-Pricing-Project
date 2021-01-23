@@ -15,30 +15,40 @@ library(car)
 library(magrittr)
 library(tibble)
 library(naniar)
+library(VIM)
+library(FactoMineR)
+library(purrr)
 library(dplyr)
 ```
 
 ```{r data download and clean}
 ### Download Data and Clean ###
+
+# teammates that fork this code chunk, be sure to set
+# your working directory to the DataSet folder in your your github folder
 setwd("C:/Users/justi/Documents/GitHub/6372-Auto-Pricing-Project/DataSet")
 autos <- read.csv("data1.csv")
 view(autos)
 
 
 ##### Look for any NAs in the data set ####
-sapply(autos, function(x) sum(is.na(x)))
+sapply(autos, function(x) sum(x %in% common_na_strings)) # missing values using other than NA
+sapply(autos, function(x) sum(x %in% common_na_numbers)) # missing values using other than NA
+res<-summary(aggr(autos)) # visual graph of missing values
+res #summary of missing values by variable name
+
 
 # Missing 69 values for HP, 30 for Engine Cylinders, 6 for # of doors
 missingHP <- which (is.na(autos$Engine.HP))
-write.csv(autos[missingHP,],"MissingHP.csv")
-view(autos[missingHP,])
+write.csv(autos[missingHP,],"MissingHP.csv") #export missing HP to csv for excel manipulation
+#view(autos[missingHP,])
 
 
 #Fiat 500e - electric so no cylinders
 autos <- autos %>% mutate(Engine.HP = replace(Engine.HP, Model == "500e",111)) 
 
 #2017 Continental
-autos[c(2906:2909)]
+autos[c(2906:2909),]
 autos$Engine.HP[c(2906:2909)] <- 400 
 
 #2015 Impala duel-fuel
@@ -48,7 +58,6 @@ autos$Engine.HP[c(5826,5831,5832,5834,5840, 5841)] <- "260(gas)/ 230(CNG) "
 #2017 Escape
 autos[c(4204:4207),]
 autos$Engine.HP[c(4204:4207)] <- 179 
-view(autos)
 
 #2013-2014 Fit EV
 autos[c(4706,4707),]
@@ -74,6 +83,8 @@ autos$Engine.HP[c(9851:9855)] <- 109
 autos$Engine.HP[c(8375:8376)] <- 154
 
 #Telsa Model S missing values
+autos %>% filter(Make == "Tesla")
+
 tesla <- read.csv("tesla.csv")
 #view(tesla)
 
@@ -94,14 +105,16 @@ autos$Engine.HP[c(6386:6395)] <- 107
 #### Work on missing cylinders 
 missingCyl <- which (is.na(autos$Engine.Cylinders))
 #write.csv(autos[missingCyl,],"MissingCyl.csv")
-view(autos[missingCyl,])
+#view(autos[missingCyl,])
 #change electric cars to 'e' for cylinders since they don't have any
 autos$Engine.Cylinders <- ifelse(autos$Engine.Fuel.Type == 'electric','e',autos$Engine.Cylinders)
 #change the mazda RX cars to 'r' for rotary engine since they don't have cylinders
 autos$Engine.Cylinders[c(8696:8715)] <- 'r'
 
 # any remaining missing values?
-sapply(autos, function(x) sum(is.na(x)))
+sapply(autos, function(x) sum(x %in% common_na_strings))
+sapply(autos, function(x) sum(x %in% common_na_numbers))
+
 # the software seems to think there is 1 value missing for number.of.doors
 autos[which(is.na(autos$Number.of.Doors)),]
 # 2- door ferrari ff
@@ -115,16 +128,19 @@ autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], a
 autos$Year <- as.factor(autos$Year) # make Year into a factor
 str(autos)
 sapply(autos, function(x) sum(is.na(x)))
-# Justin R just pointed out we have N/A's in the dataset 
-# as well that didn't show up in the sapply funciont
 
-sapply(autos, function(x) sum(x %in% common_na_strings))
-sapply(autos, function(x) sum(x %in% common_na_numbers))
 
 # Engine.Fuel.Type - suzuki is missing
 autos$Engine.Fuel.Type[c(11322-11324)] <- 'regular unleaded'
 
-# All that is left now is to either predict or imput the Market.Category
-
+# All that is left now is to either predict or imput the Market.Category - 
+# rather, let's follow the path of the directions and just create and "exotic" attribute
+exotic <- c('Ferrari','Alfa Romeo','McLaren', 'Maybach', 'Porsche', 
+            'Bentley', 'Lamborghini', 'Spyker', 'Rolls-Royce', 'Maserati',
+            'Aston Martin', 'Lotus', 'Bugatti')
+for(i in 1:length(autos$Make)){
+  ifelse(autos$Make[i] %in% exotic,autos$Exotic[i] <- 'Exotic', autos$Exotic[i] <- 'Not Exotic')
+}
+view(autos)
 
 ```
