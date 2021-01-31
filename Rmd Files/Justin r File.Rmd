@@ -22,6 +22,7 @@ library(gdata)
 library(glmnet)
 library(leaps)
 library(caret)
+library(stringr)
 library(dplyr)
 ```
 
@@ -322,13 +323,51 @@ autos <- autos[,c(15,1:14,17)]
 str(autos)
 
 # look at the matrix plots vs MSRP
-pairs(autos[,c(1:6)]) 
-pairs(autos[,c(1,7:11)])
-pairs(autos[,c(1,12:16)])
-pairs(autos[,c(1,6,7,8,9,10,11,12,14,15)]) #MSRP ~ HP + Cyl + Eng Type + Wheel-Drive + Doors + Size + Style + city + pop 
+#pairs(autos[,c(1:6)]) 
+#pairs(autos[,c(1,7:11)])
+#pairs(autos[,c(1,12:16)])
+#pairs(autos[,c(1,6,7,8,9,10,11,12,14,15)]) #MSRP ~ HP + Cyl + Eng Type + Wheel-Drive + Doors + Size + Style + city + pop 
  
 ```
 
+```{r clean up the categorical variables}
+
+# test for differences in fuel types related to MSRP
+test_lm <- lm(MSRP~Engine.Fuel.Type, data=autos)
+summary(test_lm)
+
+# Testing for unleaded differences
+test_lm <- autos %>% filter(grepl("unleaded",Engine.Fuel.Type)) %>%
+  lm(MSRP~Engine.Fuel.Type, data=.)
+summary(test_lm)
+  
+autos$new.fuel <- as.factor(autos$Engine.Fuel.Type)
+autos$new.fuel <- as.factor(autos$new.fuel)
+
+autos$new.fuel <- str_replace_all(autos$new.fuel, "premium unleaded \\(recommended\\)", "regular unleaded")
+unique(autos$new.fuel)
+test_lm <- lm(MSRP~new.fuel, data=autos)
+summary(test_lm)
+
+autos$new.fuel <- str_replace_all(autos$new.fuel, "flex-fuel \\(premium unleaded recommended\\/E85\\)", "flex-fuel (unleaded/E85)")
+test_lm <- lm(MSRP~new.fuel, data=autos)
+summary(test_lm)
+
+autos$new.fuel <- str_replace_all(autos$new.fuel, "flex-fuel \\(unleaded\\/E85\\)", "flex-fuel")
+autos$new.fuel <- str_replace_all(autos$new.fuel, "flex-fuel \\(unleaded\\/natural gas\\)", "flex-fuel")
+test_lm <- lm(MSRP~new.fuel, data=autos)
+summary(test_lm)
+
+autos$new.fuel <- case_when(
+  autos$new.fuel == "natural gas" ~ "alternative",
+  autos$new.fuel == "flex-fuel" ~ "alternative",
+  autos$new.fuel == "diesel" ~ "alternative",
+  autos$new.fuel == "electric" ~ "alternative",
+  TRUE~autos$new.fuel)
+
+
+
+```
 
 ```{r create 3 data sets}
 
@@ -360,8 +399,9 @@ str(validate)
 
 ```
 
+
 ```{r forward regression}
-reg.fwd <- regsubsets(MSRP ~ .,data=train, method="forward")
+reg.fwd <- regsubsets(MSRP ~ Make,data=train, method="forward")
 
 #Really handy predict function
 predict.regsubsets <- function (object , newdata ,id ,...)
