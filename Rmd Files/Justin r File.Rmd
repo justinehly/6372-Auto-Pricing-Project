@@ -22,42 +22,56 @@ library(gdata)
 library(glmnet)
 library(leaps)
 library(caret)
+library(tidyverse)
 library(stringr)
 library(dplyr)
 ```
 
-```{r data download and clean data}
+```{r data download data}
 ### Download Data and Clean ###
 
 # teammates that fork this code chunk, be sure to set
 # your working directory to the DataSet folder in your your github folder
 #setwd("C:/Users/justi/Documents/GitHub/6372-Auto-Pricing-Project/DataSet")
 setwd(choose.dir())
-autos <- read.csv("data1.csv")
-view(autos)
+auto_data <- read.csv("data1.csv")
+view(auto_data)
 
-summary(autos)
-str(autos)
+summary(auto_data)
+str(auto_data)
+autos <- auto_data
+```
+
+
+
+```{r clean data}
+#############################
+
+###    Clean the dataset  ###
+
+#############################
 
 autos <- rename(autos, mpg.highway = highway.MPG, mpg.city = city.mpg)
+# replace all chr with factors
+autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], as.factor)
+autos$Year <- as.factor(autos$Year) # make Year into a factor
+autos$Number.of.Doors <- as.factor(autos$Number.of.Doors) # change to factor
+
 view(autos)
+
 
 ### Audi A6 sure does have an awesome mpg.highway - should be 34 not 354 ###
 autos$mpg.highway[1120] <- 34
 
+# create an average mpg column
+autos$MPG <- (autos$mpg.city+autos$mpg.highway) / 2
+autos <- autos[,-c(13,14)]
 
 ##### Look for any NAs in the data set ####
 sapply(autos, function(x) sum(x %in% common_na_strings)) # missing values using other than NA
 sapply(autos, function(x) sum(x %in% common_na_numbers)) # missing values using other than NA
 res<-summary(aggr(autos)) # visual graph of missing values
 res #summary of missing values by variable name
-
-
-# Missing 69 values for HP, 30 for Engine Cylinders, 6 for # of doors
-# missingHP <- which (is.na(autos$Engine.HP))
-# write.csv(autos[missingHP,],"MissingHP.csv") #export missing HP to csv for excel manipulation
-# view(autos[missingHP,])
-
 
 #Fiat 500e - electric so no cylinders
 autos$Engine.HP[c(540:542)] <- 111 
@@ -79,8 +93,8 @@ autos[c(4786,4790,4799),]
 autos$Engine.HP[c(4786,4790,4799)] <- 143
 
 #2005 Ford Freestar only vans above $29k have 201 HP
-autos[c(4915:4928),] %>% select(Engine.HP,mpg.highway, mpg.city, MSRP) %>% arrange(MSRP)
-autos[c(4915:4928),] %>% select(Engine.HP,mpg.highway, mpg.city, MSRP) %>% arrange(mpg.highway)
+autos[c(4915:4928),] %>% select(Engine.HP,MPG, MSRP) %>% arrange(MSRP)
+autos[c(4915:4928),] %>% select(Engine.HP,MPG, MSRP) %>% arrange(MPG)
 autos$Engine.HP[c(4915:4918)] <- 193
 autos$Engine.HP[c(4919:4920)] <- 201
 
@@ -154,11 +168,10 @@ autos$Market.Category <- NULL #remove this unused column, it's overly complex
 
 autos$Engine.HP <- as.integer(autos$Engine.HP)
 
-#2015 Impala duel-fuel - porbably best to create a couple new columns to deal with alternate fuel vehicles
+#2015 Impala duel-fuel - since only a 30hp difference, might as well use the higher hp
+
 autos[c(5826,5831, 5832, 5834, 5840, 5841),]
 autos$Engine.HP[c(5826,5831,5832,5834,5840, 5841)] <- 260
-autos$Engine.HP.AltFuel <- autos$Engine.HP #set this column up, for cars that have less HP with alternate fuels
-autos$Engine.HP.AltFuel[c(5826,5831,5832,5834,5840, 5841)] <- 230
 
 
 
@@ -185,24 +198,30 @@ view(autos)
 sapply(autos, function(x) sum(is.na(x)))
 
 
+
 ```
 
 
-Objective 1: Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships and interpreting those relationships.  A key question of interest that must be addressed in this analysis is the importance of the “Popularity” variable.  While the details of this variable are vague, it was created from social media, and the “higher ups” are curious how much general popularity can play a role in the retail price of a vehicle.   
-
-
 ```{r objective 1 EDA}
+####################
+
+### EDA  ###########
+
+####################
+
 library(ggplot2)
 summary(autos) #summary of main autos df
 
+
 ### Make ###
-t(aggregate(Popularity~Make,data=autos,min)) #appears each make has a specific popularity
-autos %>% ggplot(aes(x=Make, y=mean(Popularity))) +
+t(aggregate(Popularity~Make,data=auto_data,min)) #appears each make has a specific popularity
+auto_data %>% ggplot(aes(x=Make, y=mean(Popularity))) +
   geom_col() +
   labs(title = "Mean Popularity Score vs Make", 
        y = "Mean Popularity", 
        x = "Make") + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
 
 ### Model ###
 t(aggregate(Popularity~Model,data=autos,summary))
@@ -286,7 +305,6 @@ autos %>% ggplot(aes(x=Vehicle.Size, y=mean(Popularity))) +
 
 ###  Vehicle.Style ###
 t(aggregate(Popularity~Vehicle.Style , data=autos, summary))
-view(t(t(aggregate(Popularity~Vehicle.Style , data=autos, mean))))
 
 autos %>% ggplot(aes(x=Vehicle.Style, y=mean(Popularity))) +
   geom_col() +
@@ -296,81 +314,215 @@ autos %>% ggplot(aes(x=Vehicle.Style, y=mean(Popularity))) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 
-### mpg.highway ###
-t(aggregate(Popularity~mpg.highway , data=autos, summary))
-view(t(t(aggregate(Popularity~mpg.highway , data=autos, mean))))
-autos %>% ggplot(aes(x=mpg.highway, y=mean(Popularity))) +
+### MPG ###
+t(aggregate(Popularity~MPG, data=autos, summary))
+
+autos %>% ggplot(aes(x=MPG, y=mean(Popularity))) +
   geom_col() +
   labs(title = "Mean Popularity Score vs Highway MPG", 
        y = "Mean Popularity", 
-       x = "Highway MPG") + theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-########### mpg.city ###########
-t(aggregate(Popularity~mpg.city , data=autos, summary))
-view(t(t(aggregate(Popularity~mpg.city , data=autos, mean))))
-autos %>% ggplot(aes(x=mpg.city, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Mean Popularity Score vs MPG City", 
-       y = "Mean Popularity", 
-       x = "City MPG") + theme_classic() +
+       x = "Average MPG") + theme_classic() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 
 summary(autos)
 names(autos)
-autos <- autos[,c(15,1:14,17)]
+str(autos)
+# rearrange the order of variables to put response "MSRP" first
+autos <- autos[,c(13,1:12,14,15)]
 str(autos)
 
 # look at the matrix plots vs MSRP
-#pairs(autos[,c(1:6)]) 
-#pairs(autos[,c(1,7:11)])
-#pairs(autos[,c(1,12:16)])
-#pairs(autos[,c(1,6,7,8,9,10,11,12,14,15)]) #MSRP ~ HP + Cyl + Eng Type + Wheel-Drive + Doors + Size + Style + city + pop 
+pairs(autos[,c(1:6)]) 
+pairs(autos[,c(1,7:11)])
+pairs(autos[,c(1,12:13)])
+pairs(autos[,c(1,6,13,14)]) #MSRP ~ HP + Popularity, MPG
  
+
+
 ```
 
 ```{r clean up the categorical variables}
+########################################
 
+### Clean up categorical variables #####
+
+########################################
+
+block_saver <- autos # in case I accidentally mess up the dataframe, I can restart here without having to start all the way from the beginning
+
+names(autos)
+
+
+autos1 <- autos[,-c(2:4,10)]
+names(autos1)
+str(autos1)
+mod.fit <- aov(MSRP~., data=autos1)
+summary(mod.fit)
+# MPG(pvalue = 0.107) cfrom f tests
+autos1 <- autos1[,-c(10)]
+
+# test within the categorical variables
+
+test.lm <- lm(MSRP~., data=autos1)
+summary(test.lm)
+vif(test.lm) # error with aliased coefficients, let's remove make and model for now
+
+
+##################
+
+### Fuel Types ###
+
+##################
 # test for differences in fuel types related to MSRP
-test_lm <- lm(MSRP~Engine.Fuel.Type, data=autos)
+test_lm <- lm(MSRP~Engine.Fuel.Type, data=autos1)
 summary(test_lm)
 
 # Testing for unleaded differences
-test_lm <- autos %>% filter(grepl("unleaded",Engine.Fuel.Type)) %>%
+test_lm <- autos1 %>% filter(grepl("unleaded",Engine.Fuel.Type)) %>%
   lm(MSRP~Engine.Fuel.Type, data=.)
 summary(test_lm)
   
-autos$new.fuel <- as.factor(autos$Engine.Fuel.Type)
-autos$new.fuel <- as.factor(autos$new.fuel)
+autos1$new.fuel <- as.factor(autos1$Engine.Fuel.Type)
+autos1$new.fuel <- as.factor(autos1$new.fuel)
 
-autos$new.fuel <- str_replace_all(autos$new.fuel, "premium unleaded \\(recommended\\)", "regular unleaded")
-unique(autos$new.fuel)
-test_lm <- lm(MSRP~new.fuel, data=autos)
+autos1$new.fuel <- str_replace_all(autos1$new.fuel, "premium unleaded \\(recommended\\)", "regular unleaded")
+unique(autos1$new.fuel)
+test_lm <- lm(MSRP~new.fuel, data=autos1)
 summary(test_lm)
 
-autos$new.fuel <- str_replace_all(autos$new.fuel, "flex-fuel \\(premium unleaded recommended\\/E85\\)", "flex-fuel (unleaded/E85)")
-test_lm <- lm(MSRP~new.fuel, data=autos)
+autos1$new.fuel <- str_replace_all(autos1$new.fuel, "flex-fuel \\(premium unleaded recommended\\/E85\\)", "flex-fuel (unleaded/E85)")
+test_lm <- lm(MSRP~new.fuel, data=autos1)
 summary(test_lm)
 
-autos$new.fuel <- str_replace_all(autos$new.fuel, "flex-fuel \\(unleaded\\/E85\\)", "flex-fuel")
-autos$new.fuel <- str_replace_all(autos$new.fuel, "flex-fuel \\(unleaded\\/natural gas\\)", "flex-fuel")
-test_lm <- lm(MSRP~new.fuel, data=autos)
+autos1$new.fuel <- str_replace_all(autos1$new.fuel, "flex-fuel \\(unleaded\\/E85\\)", "flex-fuel")
+autos1$new.fuel <- str_replace_all(autos1$new.fuel, "flex-fuel \\(unleaded\\/natural gas\\)", "flex-fuel")
+test_lm <- lm(MSRP~new.fuel, data=autos1)
 summary(test_lm)
 
-autos$new.fuel <- case_when(
-  autos$new.fuel == "natural gas" ~ "alternative",
-  autos$new.fuel == "flex-fuel" ~ "alternative",
-  autos$new.fuel == "diesel" ~ "alternative",
-  autos$new.fuel == "electric" ~ "alternative",
-  TRUE~autos$new.fuel)
+autos1$new.fuel <- case_when(
+  autos1$new.fuel == "natural gas" ~ "alternative",
+  autos1$new.fuel == "flex-fuel" ~ "alternative",
+  autos1$new.fuel == "diesel" ~ "alternative",
+  autos1$new.fuel == "electric" ~ "alternative",
+  TRUE~autos1$new.fuel)
+
+autos1$new.fuel <- as.factor(autos1$new.fuel)
+levels(autos1$new.fuel)
+
+autos1$Engine.Fuel.Type <- autos1$new.fuel
+levels(autos1$Engine.Fuel.Type)
+str(autos1)
+names(autos1)
+# remove new.fuel
+autos1 <- autos1[,-13]
 
 
+###### New LM test ##########
+
+test_lm <- lm(MSRP~., data=autos1)
+summary(test_lm)
+names(autos1)
+
+# remove Engine.HP b/c insignificant pvalue = 0.425
+autos1 <- autos1[,-2]
+
+###### New LM test ##########
+
+test_lm <- lm(MSRP~., data=autos1)
+summary(test_lm)
+
+#########################
+
+### Transmission  #######
+
+#########################
+
+# Transmission Direct Drive appears insig pvalue =.414
+levels(autos1$Transmission.Type)
+
+autos1$Transmission.Type <- str_replace_all(autos1$Transmission.Type, "AUTOMATED_MANUAL", "n")
+autos1$Transmission.Type <- str_replace_all(autos1$Transmission.Type, "DIRECT_DRIVE", "n")
+autos1$Transmission.Type <- str_replace_all(autos1$Transmission.Type, "n", "AUTO-MANUAL-OR-DIRECT-DRIVE")
+
+autos1$Transmission.Type <- as.factor(autos1$Transmission.Type)
+
+### new LM test ###
+
+test_lm <- lm(MSRP~., data=autos1)
+summary(test_lm)
+
+############################
+
+### Driven Wheels ##########
+
+############################
+
+# Driven Wheels
+autos1$Driven_Wheels <- str_replace_all(autos1$Driven_Wheels, "four wheel drive", "zzz")
+autos1$Driven_Wheels <- str_replace_all(autos1$Driven_Wheels, "all wheel drive", "zzz")
+autos1$Driven_Wheels <- str_replace_all(autos1$Driven_Wheels, "front wheel drive", "zzz")
+autos1$Driven_Wheels <- str_replace_all(autos1$Driven_Wheels, "zzz", "all or 4 wheel drive")
+autos1$Driven_Wheels <- as.factor(autos1$Driven_Wheels)
+levels(autos1$Driven_Wheels)
+
+test_lm <- lm(MSRP~., data=autos1)
+summary(test_lm)
+
+#############################
+
+### Vehicle Size ############
+
+#############################
+
+# vehicle size large pvlaue = 0.3796
+autos1$Vehicle.Size <- str_replace_all(autos1$Vehicle.Size, "Compact", "Not-Midsize")
+autos1$Vehicle.Size <- str_replace_all(autos1$Vehicle.Size, "Large", "Not-Midsize")
+autos1$Vehicle.Size <- as.factor(autos1$Vehicle.Size)
+levels(autos1$Vehicle.Size)
+
+### new lm test ###
+
+test_lm <- lm(MSRP~., data=autos1)
+summary(test_lm)
+
+test_lm <- lm(MSRP~Vehicle.Style, data=autos1)
+summary(test_lm)
+#autos1$Vehicle.Style <- autos$Vehicle.Style
+autos1$Vehicle.Style <- as.character(autos1$Vehicle.Style)
+autos1$Vehicle.Style <- case_when(
+  autos1$Vehicle.Style == "2dr SUV" ~ "SUV",
+  autos1$Vehicle.Style == "4dr SUV" ~ "SUV",
+  autos1$Vehicle.Style == "Convertible SUV" ~ "SUV",
+  autos1$Vehicle.Style == "4dr Hatchback" ~ "Sedan",
+  autos1$Vehicle.Style == "Extended Cab Pickup" ~ "Pickup",
+  autos1$Vehicle.Style == "Regular Cab Pickup" ~ "Pickup",
+  autos1$Vehicle.Style == "Crew Cab Pickup" ~ "Pickup",
+  autos1$Vehicle.Style == "Cargo Minivan" ~ "Other",
+  autos1$Vehicle.Style == "Cargo Van" ~ "Other",
+  autos$Vehicle.Style == "2dr Hatchback" ~ "Other",
+  TRUE ~ autos1$Vehicle.Style
+)
+autos1$Vehicle.Style <- as.factor(autos1$Vehicle.Style)
+levels(autos1$Vehicle.Style)
+
+### Lm test
+test_lm <- lm(MSRP~., data=autos1)
+summary(test_lm)
+vif(test_lm) # all vif's look good around 1
+
+
+autos <- autos1
+str(autos)
 
 ```
 
 ```{r create 3 data sets}
+##############################
 
+#### Create 3 Data Sets  #####
+
+##############################
 set.seed(123)
 spec = c(train = .8, test = .1, validate = .1) #set the split percentages 80/10/10
 
@@ -399,9 +551,12 @@ str(validate)
 
 ```
 
+Objective 1: Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships and interpreting those relationships.  A key question of interest that must be addressed in this analysis is the importance of the “Popularity” variable.  While the details of this variable are vague, it was created from social media, and the “higher ups” are curious how much general popularity can play a role in the retail price of a vehicle.   
+
 
 ```{r forward regression}
-reg.fwd <- regsubsets(MSRP ~ Make,data=train, method="forward")
+reg.fwd <- regsubsets(MSRP ~ .,data=train, method="forward")
+
 
 #Really handy predict function
 predict.regsubsets <- function (object , newdata ,id ,...)
@@ -413,9 +568,10 @@ predict.regsubsets <- function (object , newdata ,id ,...)
   mat[,xvars]%*%coefi
   }
 
+
 testASE <- c()
 #note my index is to 100 since that what I set it in regsubsets
-for (i in 1:1038){
+for (i in 1:reg.fwd$nvmax){
   predictions <- predict.regsubsets(object=reg.fwd, newdata=test, id=i) 
   testASE[i]  <- mean((test$MSRP - predictions)^2)
 }
