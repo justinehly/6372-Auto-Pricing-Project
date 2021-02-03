@@ -21,9 +21,12 @@ library(purrr)
 library(gdata)
 library(glmnet)
 library(leaps)
+library(ISLR)
 library(caret)
 library(tidyverse)
 library(stringr)
+library(ggplot2)
+library(scales)
 library(dplyr)
 ```
 
@@ -40,6 +43,7 @@ view(auto_data)
 
 summary(auto_data)
 str(auto_data)
+names(auto_data)
 autos <- auto_data
 ```
 
@@ -58,6 +62,7 @@ autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], a
 autos$Year <- as.factor(autos$Year) # make Year into a factor
 autos$Number.of.Doors <- as.factor(autos$Number.of.Doors) # change to factor
 
+str(autos)
 view(autos)
 
 
@@ -65,14 +70,19 @@ view(autos)
 autos$mpg.highway[1120] <- 34
 
 # create an average mpg column
-autos$MPG <- (autos$mpg.city+autos$mpg.highway) / 2
+autos$avgMPG <- (autos$mpg.city+autos$mpg.highway) / 2
+names(autos)
 autos <- autos[,-c(13,14)]
+str(autos)
 
 ##### Look for any NAs in the data set ####
 sapply(autos, function(x) sum(x %in% common_na_strings)) # missing values using other than NA
 sapply(autos, function(x) sum(x %in% common_na_numbers)) # missing values using other than NA
 res<-summary(aggr(autos)) # visual graph of missing values
 res #summary of missing values by variable name
+
+
+
 
 #Fiat 500e - electric so no cylinders
 autos$Engine.HP[c(540:542)] <- 111 
@@ -94,8 +104,8 @@ autos[c(4786,4790,4799),]
 autos$Engine.HP[c(4786,4790,4799)] <- 143
 
 #2005 Ford Freestar only vans above $29k have 201 HP
-autos[c(4915:4928),] %>% select(Engine.HP,MPG, MSRP) %>% arrange(MSRP)
-autos[c(4915:4928),] %>% select(Engine.HP,MPG, MSRP) %>% arrange(MPG)
+autos[c(4915:4928),] %>% select(Engine.HP,avgMPG, MSRP) %>% arrange(MSRP)
+autos[c(4915:4928),] %>% select(Engine.HP,avgMPG, MSRP) %>% arrange(avgMPG)
 autos$Engine.HP[c(4915:4918)] <- 193
 autos$Engine.HP[c(4919:4920)] <- 201
 
@@ -133,9 +143,9 @@ missingCyl <- which (is.na(autos$Engine.Cylinders))
 #write.csv(autos[missingCyl,],"MissingCyl.csv")
 #view(autos[missingCyl,])
 #change electric cars to 'e' for cylinders since they don't have any
-autos$Engine.Cylinders <- ifelse(autos$Engine.Fuel.Type == 'electric','e',autos$Engine.Cylinders)
-#change the mazda RX cars to 'r' for rotary engine since they don't have cylinders
-autos$Engine.Cylinders[c(8696:8715)] <- 'r'
+autos$Engine.Cylinders <- ifelse(autos$Engine.Fuel.Type == 'electric','E',autos$Engine.Cylinders)
+#change the mazda RX cars to 'R' for rotary engine since they don't have cylinders
+autos$Engine.Cylinders[c(8696:8715)] <- 'R'
 
 # any remaining missing values?
 sapply(autos, function(x) sum(x %in% common_na_strings))
@@ -155,7 +165,7 @@ str(autos)
 # Engine.Fuel.Type - suzuki is missing
 autos$Engine.Fuel.Type[c(11322:11324)] <- 'regular unleaded'
 
-# All that is left now is to either predict or imput the Market.Category - 
+# All that is left now is to either predict or impute the Market.Category - 
 # rather, let's follow the path of the directions and just create and "exotic" attribute
 exotic <- c('Ferrari','Alfa Romeo','McLaren', 'Maybach', 'Porsche', 
             'Bentley', 'Lamborghini', 'Spyker', 'Rolls-Royce', 'Maserati',
@@ -163,6 +173,19 @@ exotic <- c('Ferrari','Alfa Romeo','McLaren', 'Maybach', 'Porsche',
 for(i in 1:length(autos$Make)){
   ifelse(autos$Make[i] %in% exotic,autos$Exotic[i] <- 'Exotic', autos$Exotic[i] <- 'Not Exotic')
 }
+# Actually after some further evaluation, I feel setting the exotic car price ta at $100k is a better fit for analysis also, let's remove the Bugatti, those literally sale <100 annually
+
+autos<-autos[-c(11363:11365),]
+unique(autos$Make)
+
+autos$Exotic <- as.character(autos$Exotic)
+autos$Exotic <- case_when(
+  autos$MSRP > 100000 ~ "Exotic",
+  TRUE ~ autos$Exotic
+)
+
+view(autos %>% filter(autos$MSRP > 100000) )
+
 autos$Exotic <- as.factor(autos$Exotic)
 str(autos)
 autos$Market.Category <- NULL #remove this unused column, it's overly complex
@@ -181,7 +204,7 @@ str(autos)
 autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], as.factor)
 autos$Year <- as.factor(autos$Year) # make Year into a factor
 autos$Number.of.Doors <- as.factor(autos$Number.of.Doors) # change to factor
-
+autos[sapply(autos,is.integer)] <- lapply(autos[sapply(autos,is.integer)], as.numeric)
 
 str(autos)
 sapply(autos, function(x) sum(is.na(x)))
@@ -195,9 +218,12 @@ autos$Transmission.Type[c(6367,6369)] <- "AUTOMATIC" #1993 Chrysler LeBaron
 autos$Transmission.Type[c(8043,8044,8047:8050,8052,8054)] <- "AUTOMATIC" #1991 Dodge Ram 150
 
 
+
 view(autos)
 sapply(autos, function(x) sum(is.na(x)))
 
+# export the final cleansed data set for reporting
+write.csv(capture.output(str(autos)), "cleanData.csv")
 
 
 ```
@@ -210,121 +236,72 @@ sapply(autos, function(x) sum(is.na(x)))
 
 ####################
 
-library(ggplot2)
+
 summary(autos) #summary of main autos df
 
 
 ### Make ###
 t(aggregate(Popularity~Make,data=auto_data,min)) #appears each make has a specific popularity
-auto_data %>% ggplot(aes(x=Make, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Mean Popularity Score vs Make", 
-       y = "Mean Popularity", 
-       x = "Make") + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+autos %>% dplyr::group_by(Make) %>% 
+  summarise(mean = mean(Popularity), range=range(Popularity)) %>%
+  ggplot(aes(x=Make, y=mean, fill=Make)) +
+  geom_col(show.legend = FALSE) +
+  labs(title = "Average Popularity Score by Make",
+       y = "Averge Popularity", 
+       x = "Car Make") + 
+  scale_y_continuous(label=comma) +
+  coord_flip() +
+  theme_bw()
+
+#Seems each make just has one popularity score
+autos %>% dplyr::group_by(Make) %>% 
+       summarize(min=min(Popularity),
+                 mean=mean(Popularity), 
+                 max=max(Popularity))
+
+joeCool <- as.matrix(auto_data %>% dplyr::group_by(Make,Model) %>% 
+       summarize(min=min(Popularity),
+                 mean=mean(Popularity), 
+                 max=max(Popularity)))
+view(joeCool)
+auto_data %>% count(Popularity, Make)
+# Confirmed, Popularity is directly tied to Make, they are interchangeable and thus we only need to use one of them
 
 
-### Model ###
-t(aggregate(Popularity~Model,data=autos,summary))
-autos %>% ggplot(aes(x=Model, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Mean Popularity Score vs Model", 
-       y = "Mean Popularity", 
-       x = "Model") + theme_classic()
+##### Relationship between Make and MSRP ###
 
-### Year ###
-t(aggregate(Popularity~Year, data=autos, summary))
-t(aggregate(Popularity~Year, data=autos, mean))
+autos %>% filter(Exotic == "Not Exotic") %>%
+  ggplot(aes(x=reorder(Make, desc(Make)), y=MSRP, fill=Make)) +
+  geom_boxplot(aes(group = Make), show.legend = FALSE) +
+  labs(title = "MSRP by Non-Exotic Make",
+       y = "MSRP", 
+       x = "Car Make") +
+  scale_y_continuous(label=dollar_format()) +
+  coord_flip() +
+  theme_bw()
 
+autos %>% filter(Exotic == "Exotic") %>%
+  ggplot(aes(x=reorder(Make, desc(Make)), y=MSRP, fill=Make)) +
+  geom_boxplot(aes(group = Make), show.legend = FALSE) +
+  labs(title = "MSRP by Exotic Make",
+       y = "MSRP", 
+       x = "Car Make") +
+  scale_y_continuous(label=dollar_format()) +
+  coord_flip() +
+  theme_bw()
 
-
-###  Engine.Fuel.Type ###
-t(aggregate(Popularity~Engine.Fuel.Type, data=autos, summary))
-t(aggregate(Popularity~Engine.Fuel.Type, data=autos, mean))
-autos %>% ggplot(aes(x=Engine.Fuel.Type, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Mean Popularity Score vs Engine Fuel Type", 
-       y = "Mean Popularity", 
-       x = "Engine Fuel Type") + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-### Engine.HP ###
-t(aggregate(Popularity~Engine.HP, data=autos, summary))
-t(aggregate(Popularity~Engine.HP, data=autos, mean))
-autos %>% ggplot(aes(x=Engine.HP, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Popularity Score vs Engine HP", 
-       y = "Popularity", 
-       x = "Engine HP") + theme_classic()
-# Interesting relationship here - note that mean is used to prevent the software from adding up the popularity scores vs just reporting on which one has the actual most popularity
-
-### Engine.Cylinders ###
-t(aggregate(Popularity~Engine.Cylinders, data=autos, summary))
-autos %>% ggplot(aes(x=Engine.Cylinders, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Popularity Score vs Engine Cylinders", 
-       y = "Popularity", 
-       x = "Engine Cylinders") + theme_classic()
-# Interesting relationship here - note that mean is used to prevent the software from adding up the popularity scores vs just reporting on which one has the actual most popularity
-
-### Transmission.Type ###
-t(aggregate(Popularity~Transmission.Type , data=autos, summary))
-autos %>% ggplot(aes(x=Engine.Cylinders, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Popularity Score vs Engine Cylinders", 
-       y = "Popularity", 
-       x = "Engine Cylinders") + theme_classic()
-
-### driven.wheels ###
-t(aggregate(Popularity~Driven_Wheels , data=autos, summary))
-autos %>% ggplot(aes(x=Driven_Wheels, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Popularity Score vs Driven Wheels", 
-       y = "Popularity", 
-       x = "Wheel Drive") + theme_classic()
-
-
-### Number.of.Doors ###
-t(aggregate(Popularity~Number.of.Doors , data=autos, summary))
-t(aggregate(Popularity~Number.of.Doors , data=autos, mean))
-autos %>% ggplot(aes(x=Number.of.Doors, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Mean Popularity Score vs Number of Doors", 
-       y = "Mean Popularity", 
-       x = "Number of Doors") + theme_classic()
-
-
-### Vehicle.Size  ###
-t(aggregate(Popularity~Vehicle.Size , data=autos, summary))
-t(aggregate(Popularity~Vehicle.Size , data=autos, mean))
-autos %>% ggplot(aes(x=Vehicle.Size, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Popularity Score vs Vehicle Size", 
-       y = "Popularity", 
-       x = "Vehicle Size") + theme_classic()
-
-
-###  Vehicle.Style ###
-t(aggregate(Popularity~Vehicle.Style , data=autos, summary))
-
-autos %>% ggplot(aes(x=Vehicle.Style, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Popularity Score vs Vehicle Style", 
-       y = "Popularity", 
-       x = "Vehicle Style") + theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-
-### MPG ###
-t(aggregate(Popularity~MPG, data=autos, summary))
-
-autos %>% ggplot(aes(x=MPG, y=mean(Popularity))) +
-  geom_col() +
-  labs(title = "Mean Popularity Score vs Highway MPG", 
-       y = "Mean Popularity", 
-       x = "Average MPG") + theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
+### Relationship between Cylinders and Horsepower ##
+autos %>% #filter(Exotic == "Not Exotic") %>%
+  ggplot(aes(x=reorder(Engine.Cylinders, Engine.HP), 
+             y=Engine.HP, fill=Engine.Cylinders)) +
+  geom_boxplot(aes(group = Engine.Cylinders), show.legend = FALSE) +
+  labs(title = "Engine Cylinders vs Horsepower",
+       y = "Horsepower", 
+       x = "Cylinders/ Engine Type",
+       caption = "R: RotaryEengine; E: Electric Engine") +
+  scale_y_continuous(label=comma) +
+  coord_flip() +
+  theme_bw()
 
 summary(autos)
 names(autos)
@@ -333,11 +310,13 @@ str(autos)
 autos <- autos[,c(13,1:12,14,15)]
 str(autos)
 
-# look at the matrix plots vs MSRP
-pairs(autos[,c(1:6)]) 
-pairs(autos[,c(1,7:11)])
-pairs(autos[,c(1,12:13)])
-pairs(autos[,c(1,6,13,14)]) #MSRP ~ HP + Popularity, MPG
+# look at the matrix plots of explanatory variables compared to MSRP
+# keep in mind we are reduced to just 2 - Engine.HP and avgMPG
+pairs(autos[,c(1,6,14)]) #MSRP ~ HP + Popularity, avgMPG
+
+# There looks to be some relatioinships there, but before logging, we should run some models and check the residuals.
+
+
  
 
 
@@ -361,13 +340,13 @@ str(autos1)
 mod.fit <- aov(MSRP~., data=autos1)
 summary(mod.fit)
 # MPG(pvalue = 0.107) cfrom f tests
-autos1 <- autos1[,-c(10)]
+# autos1 <- autos1[,-c(10)] - don't remove just yet
 
 # test within the categorical variables
 
 test.lm <- lm(MSRP~., data=autos1)
 summary(test.lm)
-vif(test.lm) # error with aliased coefficients, let's remove make and model for now
+vif(test.lm)[,3]^2 # error with aliased coefficients, let's remove make and model for now
 
 
 ##################
@@ -416,7 +395,7 @@ levels(autos1$Engine.Fuel.Type)
 str(autos1)
 names(autos1)
 # remove new.fuel
-autos1 <- autos1[,-13]
+autos1 <- autos1[,-12]
 
 
 ###### New LM test ##########
@@ -425,8 +404,7 @@ test_lm <- lm(MSRP~., data=autos1)
 summary(test_lm)
 names(autos1)
 
-# remove Engine.HP b/c insignificant pvalue = 0.425
-autos1 <- autos1[,-2]
+# Engine.HP looks good pvalue = < 2e-16
 
 ###### New LM test ##########
 
@@ -439,7 +417,7 @@ summary(test_lm)
 
 #########################
 
-# Transmission Direct Drive appears insig pvalue =.414
+# Transmission Direct Drive appears insig pvalue =0.6314
 levels(autos1$Transmission.Type)
 
 autos1$Transmission.Type <- str_replace_all(autos1$Transmission.Type, "AUTOMATED_MANUAL", "n")
@@ -452,6 +430,8 @@ autos1$Transmission.Type <- as.factor(autos1$Transmission.Type)
 
 test_lm <- lm(MSRP~., data=autos1)
 summary(test_lm)
+
+# Transmisson.Type looks good now
 
 ############################
 
@@ -512,9 +492,22 @@ test_lm <- lm(MSRP~., data=autos1)
 summary(test_lm)
 vif(test_lm) # all vif's look good around 1
 
+vif(test_lm)[,3]^2
+
 
 autos <- autos1
 str(autos)
+
+# Add Make and Model back in for model fitting
+autos$Make <- as.factor(auto_data$Make)
+autos$Model <- as.factor(auto_data$Model)
+
+str(autos)
+summary(autos)
+# dropping Popularity since it is a mirror of Make
+autos <- autos[,-9]
+names(autos)
+
 
 ```
 
@@ -524,6 +517,13 @@ str(autos)
 #### Create 3 Data Sets  #####
 
 ##############################
+
+# Removing the Model variable prior to splitting the sets
+# Initial pass with the models included was way over fit with adjr=97%, let's remove model
+autos <- autos[,-12]
+autos <- autos[,-11]
+names(autos)
+
 set.seed(123)
 spec = c(train = .8, test = .1, validate = .1) #set the split percentages 80/10/10
 
@@ -555,75 +555,116 @@ str(validate)
 Objective 1: Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships and interpreting those relationships.  A key question of interest that must be addressed in this analysis is the importance of the “Popularity” variable.  While the details of this variable are vague, it was created from social media, and the “higher ups” are curious how much general popularity can play a role in the retail price of a vehicle.   
 
 
-```{r forward regression}
-reg.fwd <- regsubsets(MSRP ~ .,data=train, method="forward")
+```{r forward}
 
+# I recommend restarting R at this point because the plots for some reason aren't showing labels
 
+reg.fwd <- regsubsets(MSRP ~ .,data=train, method="forward", nvmax=100)
+
+summary(reg.fwd)$adjr2
+
+summary(reg.fwd)$rss
+
+summary(reg.fwd)$bic
+
+par(mfrow=c(1,3))
+  bics <- summary(reg.fwd)$bic
+  graphics::plot(1:(reg.fwd$nvmax-1), bics, type="l", 
+                 ylab="BIC", xlab="# of predictors")
+  index <- which(bics==min(bics))
+  points(index, bics[index], col="red",pch=10)
+  
+  adjr2 <- summary(reg.fwd)$adjr2
+  graphics::plot(1:(reg.fwd$nvmax-1), adjr2, type="l", 
+                 ylab="Adj R-squared", 
+                 xlab="# of     predictors")
+  
+  index<-which(adjr2==max(adjr2))
+  points(index,adjr2[index],col="red",pch=10)
+  
+  rss<-summary(reg.fwd)$rss
+  graphics::plot(1:(reg.fwd$nvmax-1),rss,type="l",
+                 ylab="train RSS",
+                 xlab="# of predictors")
+  index<-which(rss==min(rss))
+  points(index,rss[index],col="red",pch=10)
+
+  
+  
+
+###########################
+  
+### Test Set Prediction ###
+  
+###########################
+  
 #Really handy predict function
 predict.regsubsets <- function (object , newdata ,id ,...)
   {
   form=as.formula (object$call [[2]])
-  mat=model.matrix(form ,newdata )
-  coefi=coef(object ,id=id)
+  mat=model.matrix(form, newdata)
+  coefi=coef(object, id=id)
   xvars=names(coefi)
   mat[,xvars]%*%coefi
   }
 
 
 testASE <- c()
-#note my index is to 100 since that what I set it in regsubsets
-for (i in 1:reg.fwd$nvmax){
+#note my index is to 73 since that is where the predictions from the forward selector stopped
+for (i in 1:(reg.fwd$nvmax-1)){
   predictions <- predict.regsubsets(object=reg.fwd, newdata=test, id=i) 
   testASE[i]  <- mean((test$MSRP - predictions)^2)
 }
 par(mfrow=c(1,1))
-plot(1:100,testASE,type="l", xlab="# of predictors", ylab="test vs train ASE")
+plot(1:(reg.fwd$nvmax-1),testASE,type="l", xlab="# of predictors", ylab="test vs train ASE")
 index <- which(testASE == min(testASE))
 points(index, testASE[index], col="red", pch=10)
 rss <- summary(reg.fwd)$rss
-lines(1:101,rss/1191,lty=3,col="blue")  #Dividing by 1191 since ASE=RSS/sample size
+lines(1:(reg.fwd$nvmax-1),rss/11914,lty=3,col="blue")  #Dividing by 11914 since ASE=RSS/sample size
+
+#########################
+
+### Testing the Fit ###
+
+#########################
+
+reg.final <- regsubsets(MSRP~., data=autos, method="forward", nvmax=27)
+coef(reg.final,3)
+
+final.fwd.mod <- lm(MSRP~Engine.HP + Engine.Cylinders + Exotic, data=autos)
+summary(final.fwd.mod)
+
+par(mfrow=c(1,1))
+plot(final.fwd.mod$fitted.values,autos$MSRP,
+     xlab="Predicted",
+     ylab="MSRP",
+     xlim=c(0,207000),
+     ylim=c(0,207000),
+     col = "blue")
+lines(c(0,207000), c(0,207000), col="red")
+
+head(predict(final.fwd.mod, autos, interval="predict"))
+
+#########################
+  
+  ### Model Assumptions ###
+  
+  #########################
+  
+  par(mfrow=c(2,2))
+  plot(final.fwd.mod)
+  
 
 ```
 
 ```{r model assumptions}
+# Refer to Unit 2 HW for more information
 
-reg.final = regsubsets(Popularity~.,data=Subset,method="forward",nvmax=4)
-coef(reg.final,3) #coefficients of the model
 
-final.model <- lm(mpg ~ cylinders + weight + year, data=Subset)
-summary(final.model)
-
-# Check the model assumptions to make sure everything is valid.  
-par(mfrow=c(2,2))
-plot(final.model$fitted.values, Subset$mpg)
 ```
 
 
 ```{r fit some models LASSO}
-
-#Formatting data for GLM net
-x= sparse.model.matrix(~., train[,c(1:13,15,16)]) 
-y <- train$Popularity
-
-xtest <- sparse.model.matrix(~., test[,c(1:13,15,16)])
-ytest <- test$Popularity
-
-#kept getting errors and a sparse matrix was suggested in stackoverflow 
-# https://stackoverflow.com/questions/29015282/predict-function-error-for-probabilities-in-glmnet
-
-
-grid=10^seq(10,-2, length =100)
-lasso.mod=glmnet(x,y,alpha=1, lambda =grid)
-
-cv.out=cv.glmnet(x,y,alpha=1) #alpha=1 performs LASSO
-plot(cv.out)
-bestlambda <- cv.out$lambda.min  #Optimal penalty parameter.  You can make this call visually.
-lasso.pred <- predict(lasso.mod, newx=xtest, s=bestlambda)
-
-testMSE_LASSO<-mean((ytest-lasso.pred)^2)
-testMSE_LASSO
-
-coef(lasso.mod,s=bestlambda)
 
 
 ```
