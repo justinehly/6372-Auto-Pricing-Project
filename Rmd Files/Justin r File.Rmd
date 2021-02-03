@@ -33,7 +33,8 @@ library(dplyr)
 # teammates that fork this code chunk, be sure to set
 # your working directory to the DataSet folder in your your github folder
 #setwd("C:/Users/justi/Documents/GitHub/6372-Auto-Pricing-Project/DataSet")
-setwd(choose.dir())
+setwd(choose.dir()) #this only works on a windows machine
+
 auto_data <- read.csv("data1.csv")
 view(auto_data)
 
