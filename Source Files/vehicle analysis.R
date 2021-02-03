@@ -17,6 +17,7 @@ library(VIM)
 library(FactoMineR)
 library(purrr)
 library(leaps)
+library(tree)
 
 setwd("C:/Users/wrf0/Documents/SMU Data Science Program/Applied Statistics/Project 1")
 
@@ -109,16 +110,7 @@ str(autos)
 sapply(autos, function(x) sum(is.na(x)))
 # Engine.Fuel.Type - suzuki is missing
 autos$Engine.Fuel.Type[c(11322-11324)] <- 'regular unleaded'
-# All that is left now is to either predict or imput the Market.Category - 
-# rather, let's follow the path of the directions and just create and "exotic" attribute
-exotic <- c('Ferrari','Alfa Romeo','McLaren', 'Maybach', 'Porsche', 
-            'Bentley', 'Lamborghini', 'Spyker', 'Rolls-Royce', 'Maserati',
-            'Aston Martin', 'Lotus', 'Bugatti')
-for(i in 1:length(autos$Make)){
-  ifelse(autos$Make[i] %in% exotic,autos$Exotic[i] <- 'Exotic', autos$Exotic[i] <- 'Not Exotic')
-}
 
-autos$Exotic = as.factor(autos$Exotic)
 autos$Engine.HP = as.numeric(autos$Engine.HP)
 autos$Popularity =as.numeric(autos$Popularity)
 
@@ -126,25 +118,20 @@ str(autos)
 
 attach(autos)
 
-#-----------EDA------------
+#Before we begin to work on EDA, we have to check outliers, multicollinearity and categorical variable factor levels.
 
-#De-selected Make, Model and Market Category 
-pairs(autos[,-c(1,2,10)])
-
-#Looks like highway MPG and city MPG have multicollinearity.
-#There is some sort of correlation between engine HP and MSRP.
 
 #Check Car make and popularity plot. Ford is the in the first place
 
 autos %>% ggplot(aes(x=Make,y=Popularity)) + geom_bar(stat='identity')
 
 #Check horsepower and MSRP, there some outliers. 
-autos %>% ggplot(aes(x=Engine.HP,y=MSRP)) +geom_point()+facet_wrap(~Exotic)+geom_smooth(method='loess')
+autos %>% ggplot(aes(x=Engine.HP,y=MSRP)) +geom_point()+geom_smooth(method='loess')
 
 #Remove MSRP outliers
 autos = autos %>% filter(MSRP<=1000000)
 
-autos %>% ggplot(aes(x=Popularity,y=MSRP)) +geom_point()+facet_wrap(~Exotic)
+autos %>% ggplot(aes(x=Popularity,y=MSRP)) +geom_point()
 
 
 #Check VIF for full model, we have to remove aliased coefficients, Make, Model,popularity and Market category. 
@@ -158,60 +145,81 @@ vif(full.model2)[,3]^2
 
 #We can safely remove city MPG and number of doors in our model, but we have to combine some factor levels in some
 #categorical variables.
+
+#Let's separate vehicle market category column first.
+autos3=autos %>% mutate(FactoryTuner=ifelse(grepl('Factory Tuner',Market.Category),'Yes','No')) %>%
+  mutate(Luxury=ifelse(grepl('Luxury',Market.Category),'Yes','No')) %>%
+  mutate(FlexFuel=ifelse(grepl('Flex Fuel',Market.Category),'Yes','No')) %>%
+  mutate(Hatchback=ifelse(grepl('Hatchback',Market.Category),'Yes','No')) %>%
+  mutate(Diesel=ifelse(grepl('Diesel',Market.Category),'Yes','No')) %>%
+  mutate(Hybrid=ifelse(grepl('Hybrid',Market.Category),'Yes','No')) %>%
+  mutate(Exotic=ifelse(grepl('Exotic',Market.Category),'Yes','No')) %>%
+  mutate(Crossover=ifelse(grepl('Crossover',Market.Category),'Yes','No')) %>%
+  mutate(Performance=ifelse(grepl('\\b,Performance\\b|^Performance',Market.Category),'Yes','No')) %>%
+  mutate(HighPerformance=ifelse(grepl('High-Performance',Market.Category),'Yes','No'))
+
+#Due to the limit quantity of each model level with upto 900 factor levels, we will delete model column.
 #Before we start to use model selection method, let's run linear regression to find out insignificant factor levels.
-EDA.model<-lm(MSRP~.,data=autos[,-c(9,14)])
+autos3 = autos3[,-c(2,9,10,14)] #De-selected model, number of door, city MPG and old market category columns.
+autos3$FactoryTuner = as.factor(autos3$FactoryTuner)
+autos3$Luxury = as.factor(autos3$Luxury)
+autos3$FlexFuel = as.factor(autos3$FlexFuel)
+autos3$Hatchback = as.factor(autos3$Hatchback)
+autos3$Diesel = as.factor(autos3$Diesel)
+autos3$Hybrid = as.factor(autos3$Hybrid)
+autos3$Exotic = as.factor(autos3$Exotic)
+autos3$Crossover = as.factor(autos3$Crossover)
+autos3$Performance = as.factor(autos3$Performance)
+autos3$HighPerformance = as.factor(autos3$HighPerformance)
+
+
+
+EDA.model<-lm(MSRP~.,data=autos3)
 summary(EDA.model)
+#Still too many levels in other categorical variables. Let's combine insignificant levels.
 
-Make_new <- c('Aston Martin','Bentley','Buick', 'Chevrolet', 'Ferrari', 
-            'FIAT', 'Ford', 'Honda', 'Hyundai', 'Kia',
-            'Lamborghini', 'Land Rover', 'Maserati','Maybach','Mazda','McLaren','Mercedes-Benz','Nissan',
-            'Oldsmobile','Pontiac','Porsche','Rolls-Royce','Saab','Scion','Spyker',
-            'Subaru','Suzuki','Tesla','Toyota','Volvo')
-for(i in 1:length(autos$Make)){
-  ifelse(autos$Make[i] %in% Make_new,autos$Make_new[i] <- paste(autos$Make[i]), autos$Make_new[i] <- 'Insignificant Make')
+Make_new <- c('Aston Martin','Bentley','Audi', 'BMW', 'Ferrari', 'Cadillac','Dodge',
+            'FIAT', 'Hyundai', 'Kia','Lexus','Lotus',
+            'Lamborghini', 'Land Rover', 'Maserati','Maybach','McLaren','Mercedes-Benz',
+            'Porsche','Rolls-Royce','Spyker', 'Tesla')
+for(i in 1:length(autos3$Make)){
+  ifelse(autos3$Make[i] %in% Make_new,autos3$Make_new[i] <- paste(autos3$Make[i]), autos3$Make_new[i] <- 'Insignificant Make')
 }
-autos$Make_new = as.factor(autos$Make_new)
+autos3$Make_new = as.factor(autos3$Make_new)
 
-Year_new <- c('1993','2001','2002', '2003', '2004', 
-              '2005', '2005', '2006', '2007', '2008',
+Year_new <- c('2001','2002', '2003', '2004', 
+              '2005', '2006', '2007', '2008',
               '2009', '2010', '2011','2012','2013','2014','2015','2016','2017')
-for(i in 1:length(autos$Year)){
-  ifelse(autos$Year[i] %in% Year_new,autos$Year_new[i] <- paste(autos$Year[i]), autos$Year_new[i] <- 'Insignificant Year')
+for(i in 1:length(autos3$Year)){
+  ifelse(autos3$Year[i] %in% Year_new,autos3$Year_new[i] <- paste(autos3$Year[i]), autos3$Year_new[i] <- 'Insignificant Year')
 }
-autos$Year_new = as.factor(autos$Year_new)
+autos3$Year_new = as.factor(autos3$Year_new)
 
-Category_new <- c('Crossover,Diesel','Crossover,Exotic,Luxury,High-Performance','Crossover,Exotic,Luxury,Performance', 'Crossover,Factory Tuner,Luxury,High-Performance', 'Crossover,Hatchback', 
-              'Crossover,Hatchback,Luxury', 'Crossover,Hatchback,Luxury', 'Crossover,Hybrid', 'Crossover,Luxury,High-Performance', 'Crossover,Luxury,Performance,Hybrid',
-              'Crossover,Performance', 'Diesel', 'Diesel,Luxury','Exotic,Factory Tuner,High-Performance','Exotic,Factory Tuner,Luxury,High-Performance','Exotic,Factory Tuner,Luxury,Performance','Exotic,Flex Fuel,Factory Tuner,Luxury,High-Performance','Exotic,Flex Fuel,Luxury,High-Performance',
-              'High-Performance','Luxury','Luxury,High-Performance','Luxury,High-Performance,Hybrid','Exotic,Luxury,Performance','Exotic,Performance','Factory Tuner,High-Performance',
-              'Factory Tuner,Luxury','Factory Tuner,Luxury,High-Performance','Flex Fuel','Factory Tuner,Performance','Flex Fuel,Diesel',
-              'Fuel,Factory Tuner,Luxury,High-Performance','Flex Fuel,Luxury','Flex Fuel,Luxury,High-Performance',
-              'Flex Fuel,Luxury,Performance','Flex Fuel,Performance','Hatchback','Hatchback,Diesel','Hatchback,Factory Tuner,High-Performance',
-              'Hatchback,Factory Tuner,Performance','Hatchback,Hybrid','Hatchback,Performance',
-              'High-Performance','Hybrid','Luxury,High-Performance','Luxury,High-Performance,Hybrid',
-              'Luxury,High-Performance,Hybrid','Luxury,Hybrid','Luxury,Performance','Luxury,Performance,Hybrid',
-              'N/A','Performance')
-for(i in 1:length(autos$Market.Category)){
-  ifelse(autos$Market.Category[i] %in% Category_new,autos$Category_new[i] <- 'Significant Category', autos$Category_new[i] <- 'Insignificant Category')
-}
-autos$Category_new = as.factor(autos$Category_new)
 
-Vehicle.Style_new <- c('2dr SUV','4dr Hatchback','4dr SUV', 'Convertible ', 'Sedan ') 
+Vehicle.Style_new <- c('2dr SUV','4dr SUV', 'Convertible ', 'Sedan') 
           
-for(i in 1:length(autos$Vehicle.Style)){
-  ifelse(autos$Vehicle.Style[i] %in% Vehicle.Style_new,autos$Vehicle.Style_new[i] <- paste(autos$Vehicle.Style[i]), autos$Vehicle.Style_new[i] <- 'Insignificant Style')
+for(i in 1:length(autos3$Vehicle.Style)){
+  ifelse(autos3$Vehicle.Style[i] %in% Vehicle.Style_new,autos3$Vehicle.Style_new[i] <- paste(autos3$Vehicle.Style[i]), autos3$Vehicle.Style_new[i] <- 'Insignificant Style')
 }
-autos$Vehicle.Style_new = as.factor(autos$Vehicle.Style_new)
+autos3$Vehicle.Style_new = as.factor(autos3$Vehicle.Style_new)
 
+Cylinders_new <- c('12','3', '8 ') 
 
-EDA.model<-lm(MSRP~.,data=autos[,-c(1,3,9,10,12,14)]) #Run this code to see Model factor significance level.
+for(i in 1:length(autos3$Engine.Cylinders)){
+  ifelse(autos3$Engine.Cylinders[i] %in% Cylinders_new,autos3$Cylinders_new[i] <- paste(autos3$Engine.Cylinders[i]), autos3$Cylinders_new[i] <- 'Insignificant Style')
+}
+autos3$Cylinders_new = as.factor(autos3$Cylinders_new)
+
+autos3=autos3[,-c(1,2,5,9)] #Remove old Make, Year, engine cylinders and style columns.
+EDA.model<-lm(MSRP~.,data=autos3) 
 summary(EDA.model)
+vif(EDA.model)[,3]^2 #Remove Exotic column as its VIF is larger than 10.
+autos3=autos3[,-c(15)]
 
-str(autos)
+str(autos3)
+summary(autos3)
 
-
-#Don't run below codes.
-
+#Now we can start to do EDA and fit a model.
 
 
 
@@ -297,5 +305,5 @@ coef(lasso.mod,s=bestlambda)
 
 #lm(y~.,data=somedata)
 
-
+#rpart
 
