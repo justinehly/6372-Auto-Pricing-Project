@@ -30,7 +30,7 @@ library(scales)
 library(dplyr)
 ```
 
-```{r data download data}
+```{r get-data}
 ### Download Data and Clean ###
 
 # teammates that fork this code chunk, be sure to set
@@ -46,8 +46,6 @@ str(auto_data)
 names(auto_data)
 autos <- auto_data
 ```
-
-
 
 ```{r clean data}
 #############################
@@ -227,7 +225,6 @@ write.csv(capture.output(str(autos)), "cleanData.csv")
 
 
 ```
-
 
 ```{r objective 1 EDA}
 ####################
@@ -552,8 +549,7 @@ str(validate)
 
 ```
 
-Objective 1: Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships and interpreting those relationships.  A key question of interest that must be addressed in this analysis is the importance of the “Popularity” variable.  While the details of this variable are vague, it was created from social media, and the “higher ups” are curious how much general popularity can play a role in the retail price of a vehicle.   
-
+Objective 1: Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships and interpreting those relationships. A key question of interest that must be addressed in this analysis is the importance of the "Popularity" variable. While the details of this variable are vague, it was created from social media, and the "higher ups" are curious how much general popularity can play a role in the retail price of a vehicle.
 
 ```{r forward}
 
@@ -663,10 +659,9 @@ head(predict(final.fwd.mod, autos, interval="predict"))
 
 ```
 
-
 ```{r fit some models LASSO}
 
 
 ```
 
-```
+\`\`\`
