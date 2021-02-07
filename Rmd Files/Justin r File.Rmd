@@ -61,7 +61,7 @@ autos$Year <- as.factor(autos$Year) # make Year into a factor
 autos$Number.of.Doors <- as.factor(autos$Number.of.Doors) # change to factor
 
 str(autos)
-view(autos)
+#view(autos)
 
 
 ### Audi A6 sure does have an awesome mpg.highway - should be 34 not 354 ###
@@ -73,14 +73,35 @@ names(autos)
 autos <- autos[,-c(13,14)]
 str(autos)
 
-##### Look for any NAs in the data set ####
-sapply(autos, function(x) sum(x %in% common_na_strings)) # missing values using other than NA
-sapply(autos, function(x) sum(x %in% common_na_numbers)) # missing values using other than NA
-res<-summary(aggr(autos)) # visual graph of missing values
-res #summary of missing values by variable name
+##### Look for any missing values including NA, variants of NA and 'UNKNOWN's in the data set ####
 
+missing <- sapply(autos, function(x) sum(sum(x %in% common_na_strings), 
+                                        sum(x %in% common_na_numbers),
+                                        sum(is.na(x)), 
+                                        sum(x %in% 'UNKNOWN')))
+missing 
 
+### Plot missing data ### 
+missing <- data.frame(as.list(missing)) # convert names int vector to dataframe
+missing <- as.data.frame(t(as.matrix(missing))) # transpose the matrix
+missing <- rename(missing, 'MissingValues'='V1')
+missing$Variables <- rownames(missing)
+missing <- missing[,c(2,1)]
+rownames(missing) <- 1:nrow(missing)
+missing <- missing[order(missing$MissingValues, decreasing = TRUE),]
+missing
 
+missing %>% ggplot(aes(y=reorder(Variables,MissingValues), 
+                    x=MissingValues, fill=Variables)) + 
+  geom_col(show.legend = FALSE) + 
+  labs (title ="Missing Values by Variable",
+        x = "No. Missing Values",
+        y = "Varaiables") +
+  geom_text(aes(label=comma(MissingValues, accuracy = 1)), nudge_x = 100, size=3) +
+  scale_x_continuous(labels=comma) +
+  theme_bw()
+
+### Clean up data ###
 
 #Fiat 500e - electric so no cylinders
 autos$Engine.HP[c(540:542)] <- 111 
@@ -102,7 +123,7 @@ autos[c(4786,4790,4799),]
 autos$Engine.HP[c(4786,4790,4799)] <- 143
 
 #2005 Ford Freestar only vans above $29k have 201 HP
-autos[c(4915:4928),] %>% select(Engine.HP,avgMPG, MSRP) %>% arrange(MSRP)
+autos[c(4915:4928),] %>% select(Engine.HP,avgMPG, MSRP) %>% arrange(logMSRP)
 autos[c(4915:4928),] %>% select(Engine.HP,avgMPG, MSRP) %>% arrange(avgMPG)
 autos$Engine.HP[c(4915:4918)] <- 193
 autos$Engine.HP[c(4919:4920)] <- 201
@@ -146,19 +167,15 @@ autos$Engine.Cylinders <- ifelse(autos$Engine.Fuel.Type == 'electric','E',autos$
 autos$Engine.Cylinders[c(8696:8715)] <- 'R'
 
 # any remaining missing values?
-sapply(autos, function(x) sum(x %in% common_na_strings))
-sapply(autos, function(x) sum(x %in% common_na_numbers))
+sapply(autos, function(x) sum(sum(x %in% common_na_strings), 
+                                        sum(x %in% common_na_numbers),
+                                        sum(is.na(x)), 
+                                        sum(x %in% 'UNKNOWN')))
 
 # the software seems to think there is 1 value missing for number.of.doors
 autos[which(is.na(autos$Number.of.Doors)),]
 # 2- door ferrari ff
 autos$Number.of.Doors[which(is.na(autos$Number.of.Doors))] <-2
-
-
-summary(autos)
-str(autos)
-
-
 
 # Engine.Fuel.Type - suzuki is missing
 autos$Engine.Fuel.Type[c(11322:11324)] <- 'regular unleaded'
@@ -182,7 +199,7 @@ autos$Exotic <- case_when(
   TRUE ~ autos$Exotic
 )
 
-view(autos %>% filter(autos$MSRP > 100000) )
+#view(autos %>% filter(autos$MSRP > 100000) )
 
 autos$Exotic <- as.factor(autos$Exotic)
 str(autos)
@@ -195,8 +212,6 @@ autos$Engine.HP <- as.integer(autos$Engine.HP)
 autos[c(5826,5831, 5832, 5834, 5840, 5841),]
 autos$Engine.HP[c(5826,5831,5832,5834,5840, 5841)] <- 260
 
-
-
 str(autos)
 # replace all chr with factors
 autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], as.factor)
@@ -204,10 +219,7 @@ autos$Year <- as.factor(autos$Year) # make Year into a factor
 autos$Number.of.Doors <- as.factor(autos$Number.of.Doors) # change to factor
 autos[sapply(autos,is.integer)] <- lapply(autos[sapply(autos,is.integer)], as.numeric)
 
-str(autos)
-sapply(autos, function(x) sum(is.na(x)))
 
-sapply(autos, function(x) sum(toupper(x) == toupper("Unknown")))
 # Transmission Types has 19 missing values
 autos$Transmission.Type[c(1290:1291)] <- "AUTOMATIC" #Oldsmobile Achieva
 autos$Transmission.Type[c(4692:4694)] <- "AUTOMATIC" #Pontiac Firebird with 15/23 MPG and V8
@@ -215,10 +227,12 @@ autos$Transmission.Type[c(6159,6161,6166,6175)] <- "AUTOMATIC" #1999/2000 GMC Ji
 autos$Transmission.Type[c(6367,6369)] <- "AUTOMATIC" #1993 Chrysler LeBaron
 autos$Transmission.Type[c(8043,8044,8047:8050,8052,8054)] <- "AUTOMATIC" #1991 Dodge Ram 150
 
+# recheck for missing values
+sapply(autos, function(x) sum(sum(x %in% common_na_strings), 
+                                        sum(x %in% common_na_numbers),
+                                        sum(is.na(x)), 
+                                        sum(x %in% 'UNKNOWN')))
 
-
-view(autos)
-sapply(autos, function(x) sum(is.na(x)))
 
 # export the final cleansed data set for reporting
 write.csv(capture.output(str(autos)), "cleanData.csv")
@@ -235,7 +249,14 @@ write.csv(capture.output(str(autos)), "cleanData.csv")
 
 
 summary(autos) #summary of main autos df
+# we also know from a first pass that we need a transformed MSRP
+autos$logMSRP <- log(autos$MSRP)
 
+# rearrrange autos df
+autos <- autos[,c(16,1:12,14,15)]
+str(autos)
+
+### What's going on with the Popularity variable? ###
 
 ### Make ###
 t(aggregate(Popularity~Make,data=auto_data,min)) #appears each make has a specific popularity
@@ -256,32 +277,32 @@ autos %>% dplyr::group_by(Make) %>%
                  mean=mean(Popularity), 
                  max=max(Popularity))
 
-joeCool <- as.matrix(auto_data %>% dplyr::group_by(Make,Model) %>% 
-       summarize(min=min(Popularity),
-                 mean=mean(Popularity), 
-                 max=max(Popularity)))
-view(joeCool)
-auto_data %>% count(Popularity, Make)
+#joeCool <- as.matrix(auto_data %>% dplyr::group_by(Make,Model) %>% 
+       #summarize(min=min(Popularity),
+        #         mean=mean(Popularity), 
+         #        max=max(Popularity))
+#view(joeCool)
+#auto_data %>% count(Popularity, Make)
 # Confirmed, Popularity is directly tied to Make, they are interchangeable and thus we only need to use one of them
 
 
 ##### Relationship between Make and MSRP ###
 
 autos %>% filter(Exotic == "Not Exotic") %>%
-  ggplot(aes(x=reorder(Make, desc(Make)), y=MSRP, fill=Make)) +
+  ggplot(aes(x=reorder(Make, desc(Make)), y=logMSRP, fill=Make)) +
   geom_boxplot(aes(group = Make), show.legend = FALSE) +
-  labs(title = "MSRP by Non-Exotic Make",
-       y = "MSRP", 
+  labs(title = "Non-Exotic Make by logMSRP",
+       y = "logMSRP", 
        x = "Car Make") +
   scale_y_continuous(label=dollar_format()) +
   coord_flip() +
   theme_bw()
 
 autos %>% filter(Exotic == "Exotic") %>%
-  ggplot(aes(x=reorder(Make, desc(Make)), y=MSRP, fill=Make)) +
+  ggplot(aes(x=reorder(Make, desc(Make)), y=logMSRP, fill=Make)) +
   geom_boxplot(aes(group = Make), show.legend = FALSE) +
-  labs(title = "MSRP by Exotic Make",
-       y = "MSRP", 
+  labs(title = "Exotic Make by logMSRP",
+       y = "logMSRP", 
        x = "Car Make") +
   scale_y_continuous(label=dollar_format()) +
   coord_flip() +
@@ -300,16 +321,9 @@ autos %>% #filter(Exotic == "Not Exotic") %>%
   coord_flip() +
   theme_bw()
 
-summary(autos)
-names(autos)
-str(autos)
-# rearrange the order of variables to put response "MSRP" first
-autos <- autos[,c(13,1:12,14,15)]
-str(autos)
-
-# look at the matrix plots of explanatory variables compared to MSRP
+# look at the matrix plots of explanatory variables compared to logMSRP
 # keep in mind we are reduced to just 2 - Engine.HP and avgMPG
-pairs(autos[,c(1,6,14)]) #MSRP ~ HP + Popularity, avgMPG
+pairs(autos[,c(1,6,14)]) #logMSRP ~ HP + Popularity, avgMPG
 
 # There looks to be some relatioinships there, but before logging, we should run some models and check the residuals.
 
@@ -326,24 +340,26 @@ pairs(autos[,c(1,6,14)]) #MSRP ~ HP + Popularity, avgMPG
 
 ########################################
 
-block_saver <- autos # in case I accidentally mess up the dataframe, I can restart here without having to start all the way from the beginning
 
 names(autos)
+# remove popularity
+autos <- autos[,c(1:12,14:15)]
+names(autos)
+
+block_saver <- autos # in case I accidentally mess up the dataframe, I can restart here without having to start all the way from the beginning
 
 
-autos1 <- autos[,-c(2:4,10)]
+autos1 <- autos[,-c(2:4,10)] #Make, model, year, doors
 names(autos1)
 str(autos1)
-mod.fit <- aov(MSRP~., data=autos1)
+mod.fit <- aov(logMSRP~., data=autos1)
 summary(mod.fit)
-# MPG(pvalue = 0.107) cfrom f tests
-# autos1 <- autos1[,-c(10)] - don't remove just yet
 
-# test within the categorical variables
+# Everything looks ok here, let's look at an lm to test within the categorical variables
 
-test.lm <- lm(MSRP~., data=autos1)
+test.lm <- lm(logMSRP~., data=autos1)
 summary(test.lm)
-vif(test.lm)[,3]^2 # error with aliased coefficients, let's remove make and model for now
+
 
 
 ##################
@@ -351,30 +367,31 @@ vif(test.lm)[,3]^2 # error with aliased coefficients, let's remove make and mode
 ### Fuel Types ###
 
 ##################
-# test for differences in fuel types related to MSRP
-test_lm <- lm(MSRP~Engine.Fuel.Type, data=autos1)
+# test for differences in fuel types related to logMSRP
+test_lm <- lm(logMSRP~Engine.Fuel.Type, data=autos1)
 summary(test_lm)
 
 # Testing for unleaded differences
 test_lm <- autos1 %>% filter(grepl("unleaded",Engine.Fuel.Type)) %>%
-  lm(MSRP~Engine.Fuel.Type, data=.)
+  lm(logMSRP~Engine.Fuel.Type, data=.)
 summary(test_lm)
-  
+
+
 autos1$new.fuel <- as.factor(autos1$Engine.Fuel.Type)
 autos1$new.fuel <- as.factor(autos1$new.fuel)
 
 autos1$new.fuel <- str_replace_all(autos1$new.fuel, "premium unleaded \\(recommended\\)", "regular unleaded")
 unique(autos1$new.fuel)
-test_lm <- lm(MSRP~new.fuel, data=autos1)
+test_lm <- lm(logMSRP~new.fuel, data=autos1)
 summary(test_lm)
 
 autos1$new.fuel <- str_replace_all(autos1$new.fuel, "flex-fuel \\(premium unleaded recommended\\/E85\\)", "flex-fuel (unleaded/E85)")
-test_lm <- lm(MSRP~new.fuel, data=autos1)
+test_lm <- lm(logMSRP~new.fuel, data=autos1)
 summary(test_lm)
 
 autos1$new.fuel <- str_replace_all(autos1$new.fuel, "flex-fuel \\(unleaded\\/E85\\)", "flex-fuel")
 autos1$new.fuel <- str_replace_all(autos1$new.fuel, "flex-fuel \\(unleaded\\/natural gas\\)", "flex-fuel")
-test_lm <- lm(MSRP~new.fuel, data=autos1)
+test_lm <- lm(logMSRP~new.fuel, data=autos1)
 summary(test_lm)
 
 autos1$new.fuel <- case_when(
@@ -391,22 +408,19 @@ autos1$Engine.Fuel.Type <- autos1$new.fuel
 levels(autos1$Engine.Fuel.Type)
 str(autos1)
 names(autos1)
+new.fuel.index <- grep("new.fuel", colnames(autos1))
 # remove new.fuel
-autos1 <- autos1[,-12]
+autos1 <- autos1[,-new.fuel.index]
 
 
 ###### New LM test ##########
 
-test_lm <- lm(MSRP~., data=autos1)
+test_lm <- lm(logMSRP~., data=autos1)
 summary(test_lm)
 names(autos1)
 
 # Engine.HP looks good pvalue = < 2e-16
-
-###### New LM test ##########
-
-test_lm <- lm(MSRP~., data=autos1)
-summary(test_lm)
+# Transmission needs some cleaning up
 
 #########################
 
@@ -425,10 +439,11 @@ autos1$Transmission.Type <- as.factor(autos1$Transmission.Type)
 
 ### new LM test ###
 
-test_lm <- lm(MSRP~., data=autos1)
+test_lm <- lm(logMSRP~., data=autos1)
 summary(test_lm)
 
 # Transmisson.Type looks good now
+# Wheels Driven needs some attention
 
 ############################
 
@@ -444,69 +459,63 @@ autos1$Driven_Wheels <- str_replace_all(autos1$Driven_Wheels, "zzz", "all or 4 w
 autos1$Driven_Wheels <- as.factor(autos1$Driven_Wheels)
 levels(autos1$Driven_Wheels)
 
-test_lm <- lm(MSRP~., data=autos1)
+test_lm <- lm(logMSRP~., data=autos1)
 summary(test_lm)
 
-#############################
+# Vehicle size looks ok too
+# Vehicle style may need some attention
 
-### Vehicle Size ############
 
-#############################
+# convertible suv's seem to be insignificant, let's just check to see what we can marry them to
 
-# vehicle size large pvlaue = 0.3796
-autos1$Vehicle.Size <- str_replace_all(autos1$Vehicle.Size, "Compact", "Not-Midsize")
-autos1$Vehicle.Size <- str_replace_all(autos1$Vehicle.Size, "Large", "Not-Midsize")
-autos1$Vehicle.Size <- as.factor(autos1$Vehicle.Size)
-levels(autos1$Vehicle.Size)
+autos %>% filter(Vehicle.Style == "Convertible SUV") %>% distinct(Make, Model, Year) %>% arrange(Make)
+# chevy, landrovers, nissans, suzukis are 2-door
 
-### new lm test ###
-
-test_lm <- lm(MSRP~., data=autos1)
-summary(test_lm)
-
-test_lm <- lm(MSRP~Vehicle.Style, data=autos1)
-summary(test_lm)
-#autos1$Vehicle.Style <- autos$Vehicle.Style
 autos1$Vehicle.Style <- as.character(autos1$Vehicle.Style)
 autos1$Vehicle.Style <- case_when(
   autos1$Vehicle.Style == "2dr SUV" ~ "SUV",
   autos1$Vehicle.Style == "4dr SUV" ~ "SUV",
   autos1$Vehicle.Style == "Convertible SUV" ~ "SUV",
   autos1$Vehicle.Style == "4dr Hatchback" ~ "Sedan",
+  autos1$Vehicle.Style == "2dr Hatchback" ~ "Sedan",
+  autos1$Vehicle.Style == "Wagon" ~ "Sedan",
   autos1$Vehicle.Style == "Extended Cab Pickup" ~ "Pickup",
   autos1$Vehicle.Style == "Regular Cab Pickup" ~ "Pickup",
   autos1$Vehicle.Style == "Crew Cab Pickup" ~ "Pickup",
-  autos1$Vehicle.Style == "Cargo Minivan" ~ "Other",
-  autos1$Vehicle.Style == "Cargo Van" ~ "Other",
-  autos$Vehicle.Style == "2dr Hatchback" ~ "Other",
+  autos1$Vehicle.Style == "Cargo Minivan" ~ "Cargo",
+  autos1$Vehicle.Style == "Cargo Van" ~ "Cargo",
+  autos1$Vehicle.Style == "Passenger Van" ~ "Passenger Van",
+  autos1$Vehicle.Style == "Passenger Minivan" ~ "Passenger Van",
   TRUE ~ autos1$Vehicle.Style
 )
+
 autos1$Vehicle.Style <- as.factor(autos1$Vehicle.Style)
 levels(autos1$Vehicle.Style)
 
 ### Lm test
-test_lm <- lm(MSRP~., data=autos1)
+test_lm <- lm(logMSRP~., data=autos1)
 summary(test_lm)
+
+# looks good now
+
+
 vif(test_lm) # all vif's look good around 1
 
 vif(test_lm)[,3]^2
+## (avgMPG may be an issue, but let's hang tight with that)
 
-
+autos1$Make <- autos$Make
+autos1$Model <- autos$Model
+autos1$Year <- autos$Year
 autos <- autos1
 str(autos)
 
-# Add Make and Model back in for model fitting
-autos$Make <- as.factor(auto_data$Make)
-autos$Model <- as.factor(auto_data$Model)
-
 str(autos)
 summary(autos)
-# dropping Popularity since it is a mirror of Make
-autos <- autos[,-9]
-names(autos)
 
 
 ```
+
 
 ```{r create 3 data sets}
 ##############################
@@ -551,11 +560,15 @@ str(validate)
 
 Objective 1: Display the ability to build regression models using the skills and discussions from Unit 1 and 2 with the purpose of identifying key relationships and interpreting those relationships. A key question of interest that must be addressed in this analysis is the importance of the "Popularity" variable. While the details of this variable are vague, it was created from social media, and the "higher ups" are curious how much general popularity can play a role in the retail price of a vehicle.
 
+
+### FORWARD MODEL ###
+
+
 ```{r forward}
 
 # I recommend restarting R at this point because the plots for some reason aren't showing labels
 
-reg.fwd <- regsubsets(MSRP ~ .,data=train, method="forward", nvmax=100)
+reg.fwd <- regsubsets(logMSRP ~ .,data=train, method="forward", nvmax=100)
 
 summary(reg.fwd)$adjr2
 
@@ -609,7 +622,7 @@ testASE <- c()
 #note my index is to 73 since that is where the predictions from the forward selector stopped
 for (i in 1:(reg.fwd$nvmax-1)){
   predictions <- predict.regsubsets(object=reg.fwd, newdata=test, id=i) 
-  testASE[i]  <- mean((test$MSRP - predictions)^2)
+  testASE[i]  <- mean((test$logMSRP - predictions)^2)
 }
 par(mfrow=c(1,1))
 plot(1:(reg.fwd$nvmax-1),testASE,type="l", xlab="# of predictors", ylab="test vs train ASE")
@@ -624,16 +637,16 @@ lines(1:(reg.fwd$nvmax-1),rss/11914,lty=3,col="blue")  #Dividing by 11914 since 
 
 #########################
 
-reg.final <- regsubsets(MSRP~., data=autos, method="forward", nvmax=27)
+reg.final <- regsubsets(logMSRP~., data=autos, method="forward", nvmax=27)
 coef(reg.final,3)
 
-final.fwd.mod <- lm(MSRP~Engine.HP + Engine.Cylinders + Exotic, data=autos)
+final.fwd.mod <- lm(logMSRP~Engine.HP + Engine.Cylinders + Exotic, data=autos)
 summary(final.fwd.mod)
 
 par(mfrow=c(1,1))
-plot(final.fwd.mod$fitted.values,autos$MSRP,
+plot(final.fwd.mod$fitted.values,autos$logMSRP,
      xlab="Predicted",
-     ylab="MSRP",
+     ylab="logMSRP",
      xlim=c(0,207000),
      ylim=c(0,207000),
      col = "blue")
@@ -653,15 +666,290 @@ head(predict(final.fwd.mod, autos, interval="predict"))
 
 ```
 
-```{r model assumptions}
-# Refer to Unit 2 HW for more information
+### ##############################
+
+
+### BACKWARD MODEL ###
+
+### #############################
+
+
+```{r backward}
+########################
+
+###  Backward Model  ###
+
+########################
+
+reg.bwd <- regsubsets(logMSRP ~ .,data=train, method="backward", nvmax=100)
+
+summary(reg.bwd)$adjr2
+
+summary(reg.bwd)$rss
+
+summary(reg.bwd)$bic
+
+par(mfrow=c(1,3))
+  bics <- summary(reg.bwd)$bic
+  graphics::plot(1:(reg.bwd$nvmax-1), bics, type="l", 
+                 ylab="BIC", xlab="# of predictors")
+  index <- which(bics==min(bics))
+  points(index, bics[index], col="red",pch=10)
+  
+  adjr2 <- summary(reg.bwd)$adjr2
+  graphics::plot(1:(reg.bwd$nvmax-1), adjr2, type="l", 
+                 ylab="Adj R-squared", 
+                 xlab="# of     predictors")
+  
+  index<-which(adjr2==max(adjr2))
+  points(index,adjr2[index],col="red",pch=10)
+  
+  rss<-summary(reg.bwd)$rss
+  graphics::plot(1:(reg.bwd$nvmax-1),rss,type="l",
+                 ylab="train RSS",
+                 xlab="# of predictors")
+  index<-which(rss==min(rss))
+  points(index,rss[index],col="red",pch=10)
+
+  
+  
+
+###########################
+  
+### Test Set Prediction ###
+  
+###########################
+  
+#Really handy predict function
+predict.regsubsets <- function (object , newdata ,id ,...)
+  {
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form, newdata)
+  coefi=coef(object, id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+  }
+
+
+testASE <- c()
+#note my index is to 73 since that is where the predictions from the forward selector stopped
+for (i in 1:(reg.bwd$nvmax-1)){
+  predictions <- predict.regsubsets(object=reg.bwd, newdata=test, id=i) 
+  testASE[i]  <- mean((test$logMSRP - predictions)^2)
+}
+par(mfrow=c(1,1))
+plot(1:(reg.bwd$nvmax-1),testASE,type="l", xlab="# of predictors", ylab="test vs train ASE")
+index <- which(testASE == min(testASE))
+points(index, testASE[index], col="red", pch=10)
+rss <- summary(reg.bwd)$rss
+lines(1:(reg.bwd$nvmax-1),rss/11914,lty=3,col="blue")  #Dividing by 11914 since ASE=RSS/sample size
+
+#########################
+
+### Testing the Fit ###
+
+#########################
+
+reg.final <- regsubsets(logMSRP~., data=autos, method="backward", nvmax=27)
+coef(reg.final,3)
+
+final.bwd.mod <- lm(logMSRP~Engine.HP + Engine.Cylinders + Exotic, data=autos)
+summary(final.bwd.mod)
+
+par(mfrow=c(1,1))
+plot(final.bwd.mod$fitted.values,autos$logMSRP,
+     xlab="Predicted",
+     ylab="logMSRP",
+     xlim=c(0,207000),
+     ylim=c(0,207000),
+     col = "blue")
+lines(c(0,207000), c(0,207000), col="red")
+
+head(predict(final.bwd.mod, autos, interval="predict"))
+
+#########################
+  
+  ### Model Assumptions ###
+  
+  #########################
+  
+  par(mfrow=c(2,2))
+  plot(final.bwd.mod)
+ 
+
+```
+
+### #####################
+
+### STEPWISE MODEL
+
+### #####################
+
+
+```{r stepwise}
+########################
+
+###  STEPWISE Model  ###
+
+########################
+
+reg.step <- regsubsets(logMSRP ~ .,data=train, method="seqrep", nvmax=100)
+
+summary(reg.step)$adjr2
+
+summary(reg.step)$rss
+
+summary(reg.step)$bic
+
+par(mfrow=c(1,3))
+  bics <- summary(reg.step)$bic
+  graphics::plot(1:(reg.step$nvmax-1), bics, type="l", 
+                 ylab="BIC", xlab="# of predictors")
+  index <- which(bics==min(bics))
+  points(index, bics[index], col="red",pch=10)
+  
+  adjr2 <- summary(reg.step)$adjr2
+  graphics::plot(1:(reg.step$nvmax-1), adjr2, type="l", 
+                 ylab="Adj R-squared", 
+                 xlab="# of     predictors")
+  
+  index<-which(adjr2==max(adjr2))
+  points(index,adjr2[index],col="red",pch=10)
+  
+  rss<-summary(reg.step)$rss
+  graphics::plot(1:(reg.step$nvmax-1),rss,type="l",
+                 ylab="train RSS",
+                 xlab="# of predictors")
+  index<-which(rss==min(rss))
+  points(index,rss[index],col="red",pch=10)
+
+  
+  
+
+###########################
+  
+### Test Set Prediction ###
+  
+###########################
+  
+#Really handy predict function
+predict.regsubsets <- function (object , newdata ,id ,...)
+  {
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form, newdata)
+  coefi=coef(object, id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+  }
+
+
+testASE <- c()
+#note my index is to 73 since that is where the predictions from the forward selector stopped
+for (i in 1:(reg.step$nvmax-1)){
+  predictions <- predict.regsubsets(object=reg.step, newdata=test, id=i) 
+  testASE[i]  <- mean((test$logMSRP - predictions)^2)
+}
+par(mfrow=c(1,1))
+plot(1:(reg.step$nvmax-1),testASE,type="l", xlab="# of predictors", ylab="test vs train ASE")
+index <- which(testASE == min(testASE))
+points(index, testASE[index], col="red", pch=10)
+rss <- summary(reg.step)$rss
+lines(1:(reg.step$nvmax-1),rss/11914,lty=3,col="blue")  #Dividing by 11914 since ASE=RSS/sample size
+
+#########################
+
+### Testing the Fit ###
+
+#########################
+
+reg.final <- regsubsets(logMSRP~., data=autos, method="seqrep", nvmax=27)
+coef(reg.final,3)
+
+final.step.mod <- lm(logMSRP~Engine.HP + Engine.Cylinders + Exotic, data=autos)
+summary(final.step.mod)
+
+par(mfrow=c(1,1))
+plot(final.step.mod$fitted.values,autos$logMSRP,
+     xlab="Predicted",
+     ylab="logMSRP",
+     xlim=c(0,207000),
+     ylim=c(0,207000),
+     col = "blue")
+lines(c(0,207000), c(0,207000), col="red")
+
+head(predict(final.step.mod, autos, interval="predict"))
+
+#########################
+  
+  ### Model Assumptions ###
+  
+  #########################
+  
+  par(mfrow=c(2,2))
+  plot(final.step.mod)
+ 
+
 
 
 ```
 
-```{r fit some models LASSO}
+### ###################
+
+### LASSO MODEL ###
+
+### ###################
+
+```{r LASSO model}
+
+# formatting data for GLM net
+x = model.matrix(logMSRP~.,train)[,-1]
+y = train$logMSRP
+
+xtest <- model.matrix(logMSRP~.,test)[,-1]
+ytest <- test$logMSRP
+
+grid <- 10^seq(10,-2, length = 100)
+lasso.mod <- glmnet(x, y, alpha=1, lambda = grid)
+
+cv.out <- cv.glmnet(x, y, alpha=1) # alpha = 1 performs LASSO
+
+bestlambda <- cv.out$lambda.min #Optimal penalty parameter. We can also make this call visually
+
+lasso.pred <- predict(lasso.mod, s= bestlambda, newx=xtest)
+
+testMSE_LASSO <- mean((ytest-lasso.pred)^2)
+testMSE_LASSO
+
+coef(lasso.mod, s=bestlambda)
+
+### Plot LASSO results ###
+par(mfrow=c(2,2))
+plot(lasso.mod)
+plot(lasso.mod,
+     xvar = "lambda")
+plot(cv.out)
+
+```
+
+### #######################
+
+### Boruta Method ###
+
+### #######################
+
+```{r boruta random forest wrapper}
+library(Boruta)
+
+boruta_logMSRP <- Boruta(logMSRP~., data=autos, doTrace=2) # Boruta search
+
+boruta_siglogMSRP <- names(boruta_logMSRP$finalDecision[boruta_logMSRP$finalDecision %in% c("Confirmed", "Tentative")]) #collect Confirmed and Tentative variables
+
+print(boruta_siglogMSRP) #view sig var
+
+par(mfrow=c(1,1))
+plot(boruta_logMSRP, cex.axis=.7, las=2, xlab="", 
+     main="Variable Importance to logMSRP (Boruta Method)") #plot results
 
 
 ```
 
-\`\`\`
