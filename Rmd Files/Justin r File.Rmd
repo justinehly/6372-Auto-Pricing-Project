@@ -252,6 +252,9 @@ summary(autos) #summary of main autos df
 # we also know from a first pass that we need a transformed MSRP
 autos$logMSRP <- log(autos$MSRP)
 
+# MSRP vs Year
+
+
 # rearrrange autos df
 autos <- autos[,c(16,1:12,14,15)]
 str(autos)
@@ -272,17 +275,14 @@ autos %>% dplyr::group_by(Make) %>%
   theme_bw()
 
 #Seems each make just has one popularity score
-autos %>% dplyr::group_by(Make) %>% 
+auto_data %>% dplyr::group_by(Make) %>% 
        summarize(min=min(Popularity),
                  mean=mean(Popularity), 
-                 max=max(Popularity))
+                 median=median(Popularity),
+                 max=max(Popularity)) %>%
+  View()
 
-#joeCool <- as.matrix(auto_data %>% dplyr::group_by(Make,Model) %>% 
-       #summarize(min=min(Popularity),
-        #         mean=mean(Popularity), 
-         #        max=max(Popularity))
-#view(joeCool)
-#auto_data %>% count(Popularity, Make)
+
 # Confirmed, Popularity is directly tied to Make, they are interchangeable and thus we only need to use one of them
 
 
