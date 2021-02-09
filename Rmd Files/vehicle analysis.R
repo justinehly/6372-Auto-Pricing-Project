@@ -20,6 +20,7 @@ library(leaps)
 library(tree)
 library(ggcorrplot)
 library(olsrr)
+library(plotly)
 setwd("C:/Users/wrf0/Documents/SMU Data Science Program/Applied Statistics/Project 1")
 
 autos <- read.csv("data1.csv")
@@ -410,14 +411,18 @@ ols_plot_resid_lev(model_complex)
 ols_plot_resid_qq(model_complex)
 ols_plot_resid_hist(model_complex)
 
+complex.pred<-predict(model_complex,test)
+
+complex.RMSE<-sqrt(mean((test$MSRP-expm1(complex.pred))^2))
+plot(expm1(complex.pred),test$MSRP)
+lines(0:200000,0:200000)
+complex.RMSE
 
 
 
 #Let's try to use LASSO method to build a model.
 fitControl<-trainControl(method="repeatedcv",number=10,repeats=10)
-glmnet.fit<-train(log1p(MSRP)~poly(Engine.HP,6)+Transmission.Type+Driven_Wheels+Vehicle.Size+I(highway.MPG^5)
-                  +I(highway.MPG^4)+I(highway.MPG^3)+I(highway.MPG^2)+Popularity+FactoryTuner
-                  +Luxury+FlexFuel+Hatchback+Make_new+Year_new+Vehicle.Style_new+Cylinders_new,
+glmnet.fit<-train(log1p(MSRP)~.,
                   data=train,
                   method="glmnet",
                   trControl=fitControl)
@@ -429,13 +434,13 @@ coef(glmnet.fit$finalModel,glmnet.fit$finalModel$lambdaOpt)
 
 glmnet.pred<-predict(glmnet.fit,test)
 
-glmnet.RMSE<-sqrt(mean((log1p(test$MSRP)-glmnet.pred)^2))
-plot(glmnet.pred,log1p(test$MSRP))
+glmnet.RMSE<-sqrt(mean((test$MSRP-expm1(glmnet.pred))^2))
+plot(expm1(glmnet.pred),test$MSRP)
 lines(0:200000,0:200000)
 glmnet.RMSE
 
 #Here is a more natural tool to compute RMSE as well as some additional metrics
-glmnet.test<-postResample(pred = glmnet.pred, obs = log1p(test$MSRP))                
+glmnet.test<-postResample(pred = expm1(glmnet.pred), obs = test$MSRP)                
 glmnet.test
 
 #Ranking of the predictors
@@ -443,59 +448,92 @@ varImp(glmnet.fit)
 plot(varImp(glmnet.fit))
 
 #Based on the ranking of the predictors, we have to remove some variables.
-#High way MPG, Vehicle style, Driven wheels, Vehicle size, flex fuel, factory tuner, crossover, Hatchback, Luxury
-#and performance can be removed
-#For the time being, we leave Popularity in the model.
+#High way MPG, engine fuel type, engine HP,Popularity can be removed.
+#Then we run linear regression model again.
+model_afterlasso=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+FactoryTuner+Diesel+Hybrid+Crossover
+              +Luxury+FlexFuel+Hatchback+Performance+HighPerformance+Make_new+Year_new+Vehicle.Style_new+Cylinders_new, data=train)
+summary(model_afterlasso)
+vif(model_afterlasso)[,3]^2
+ols_plot_resid_fit(model_afterlasso)
+ols_plot_resid_lev(model_afterlasso)
+ols_plot_resid_qq(model_afterlasso)
+ols_plot_resid_hist(model_afterlasso)
+ols_plot_cooksd_bar(model_afterlasso)
 
+lasso_selected.pred<-predict(model_afterlasso,test)
 
-fitControl<-trainControl(method="repeatedcv",number=10,repeats=10)
-glmnet.fit2<-train(log1p(MSRP)~~poly(Engine.HP,6)+Transmission.Type+Popularity
-                   +Make_new+Year_new+Cylinders_new,
-                  data=train,
-                  method="glmnet",
-                  trControl=fitControl)
-
-
-glmnet.fit2
-
-coef(glmnet.fit2$finalModel,glmnet.fit2$finalModel$lambdaOpt)
-
-glmnet.pred2<-predict(glmnet.fit2,test2)
-
-glmnet.RMSE2<-sqrt(mean((log1p(test2$MSRP)-glmnet.pred2)^2))
-plot(glmnet.pred2,log1p(test2$MSRP))
+glmnet.RMSE2<-sqrt(mean((test$MSRP-expm1(lasso_selected.pred))^2))
+plot(expm1(lasso_selected.pred),test$MSRP)
 lines(0:200000,0:200000)
 glmnet.RMSE2
 
-glmnet.test2<-postResample(pred = glmnet.pred2, obs = log1p(test2$MSRP))                
-glmnet.test2
 
-varImp(glmnet.fit2)
-plot(varImp(glmnet.fit2))
+#------------------Let's try KNN--------------
+autos4= autos3 %>% mutate(FactoryTuner=ifelse(FactoryTuner=='Yes',1,0)) %>%
+  mutate(Luxury=ifelse(Luxury=='Yes',1,0)) %>% 
+  mutate(FlexFuel=ifelse(FlexFuel=='Yes',1,0)) %>% 
+  mutate(Diesel=ifelse(Diesel=='Yes',1,0)) %>% 
+  mutate(Hybrid=ifelse(Hybrid=='Yes',1,0)) %>% 
+  mutate(Crossover=ifelse(Crossover=='Yes',1,0)) %>% 
+  mutate(Performance=ifelse(Performance=='Yes',1,0)) %>% 
+  mutate(HighPerformance=ifelse(HighPerformance=='Yes',1,0)) %>% 
+  mutate(Transmission.Type=ifelse(Transmission.Type=='AUTOMATIC',1,0)) %>%
+  mutate(Hatchback=ifelse(Hatchback=='Yes',1,0))
 
-#Build my own model based on predictors in autos4
-glmnet.fit3<-train(log1p(MSRP)~Transmission.Type+Luxury+Popularity+Diesel+Hybrid+Make_new+Year_new+Vehicle.Style_new
-                   +Cylinders_new,
-                   data=train2,
-                   method="glmnet",
-                   trControl=fitControl)
+autos4$Transmission.Type = as.factor(autos4$Transmission.Type)
+autos4$Luxury = as.factor(autos4$Luxury)
+autos4$FlexFuel = as.factor(autos4$FlexFuel)
+autos4$Diesel = as.factor(autos4$Diesel)
+autos4$Hybrid = as.factor(autos4$Hybrid)
+autos4$Crossover = as.factor(autos4$Crossover)
+autos4$Performance = as.factor(autos4$Performance)
+autos4$HighPerformance = as.factor(autos4$HighPerformance)
+autos4$FactoryTuner = as.factor(autos4$FactoryTuner)
+autos4$Hatchback = as.factor(autos4$Hatchback)
 
+#Use numeric variables to run KNN.
+autos4 = autos4[,c('Engine.HP','highway.MPG','Popularity','MSRP')]
+set.seed(1234)
+iterations = 50
+numks = 30
+masterAcc = matrix(nrow = iterations, ncol = numks)
+masterSen = matrix(nrow = iterations, ncol = numks)
+masterSpec = matrix(nrow = iterations, ncol = numks)
 
-glmnet.fit3
+trainIndices = sample(1:dim(autos4)[1],round(0.8 * dim(autos4)[1]),replace=F)
+testIndices = sample(1:dim(autos4)[1],round(0.1 * dim(autos4)[1]),replace=F)
+train=autos4[trainIndices,]
+test=autos4[testIndices,]
 
-coef(glmnet.fit3$finalModel,glmnet.fit3$finalModel$lambdaOpt)
-glmnet.fit3$results
-glmnet.fit3$finalModel
+classifications=knn(train,test,train$MSRP, prob = TRUE, k = 5)
+u=union(classifications,test$MSRP)
+CM = confusionMatrix(table(factor(classifications),factor(test$MSRP)))
+classifications
+CM 
 
-glmnet.pred3<-predict(glmnet.fit3,test2)
-
-glmnet.RMSE3<-sqrt(mean((log1p(test2$MSRP)-glmnet.pred3)^2))
-plot(glmnet.pred3,log1p(test2$MSRP))
-lines(0:200000,0:200000)
-glmnet.RMSE3
-
-glmnet.test3<-postResample(pred = glmnet.pred3, obs = log1p(test2$MSRP))                
-glmnet.test3
-
-varImp(glmnet.fit3)
-plot(varImp(glmnet.fit3))
+for(j in 1:iterations)
+{
+  accs = data.frame(accuracy = numeric(30), k = numeric(30))
+  trainIndices = sample(1:dim(autos4)[1],round(0.8 * dim(autos4)[1]),replace=F)
+  testIndices = sample(1:dim(autos4)[1],round(0.1 * dim(autos4)[1]),replace=F)
+  train=autos4[trainIndices,]
+  test=autos4[testIndices,]
+  for(i in 1:numks)
+  {
+    classifications = knn(train,test,train$MSRP, prob = TRUE, k = i)
+    u=union(classifications,test$MSRP)
+    table(factor(classifications,u),factor(test$MSRP,u))
+    CM = confusionMatrix(table(factor(classifications,u),factor(test$MSRP,u)))
+    masterAcc[j,i] = CM$overall[1]
+    masterSen[j,i] = CM$byClass[1]
+    masterSpec[j,i] = CM$byClass[2]
+  }
+}
+MeanAcc_KNN = colMeans(masterAcc)
+MeanSen_KNN = colMeans(masterSen)
+MeanSpec_KNN = colMeans(masterSpec)
+p=ggplot(mapping=aes(x=seq(1,numks,1), y=MeanAcc_KNN))+geom_line()
+ggplotly(p)
+MeanAcc_KNN
+MeanSen_KNN
+MeanSpec_KNN
