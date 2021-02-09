@@ -490,50 +490,77 @@ autos4$Performance = as.factor(autos4$Performance)
 autos4$HighPerformance = as.factor(autos4$HighPerformance)
 autos4$FactoryTuner = as.factor(autos4$FactoryTuner)
 autos4$Hatchback = as.factor(autos4$Hatchback)
+autos4$highway.MPG=as.numeric(autos4$highway.MPG)
+autos4$MSRP=as.numeric(autos4$MSRP)
 
 #Use numeric variables to run KNN.
 autos4 = autos4[,c('Engine.HP','highway.MPG','Popularity','MSRP')]
+
+
 set.seed(1234)
-iterations = 50
-numks = 30
-masterAcc = matrix(nrow = iterations, ncol = numks)
-masterSen = matrix(nrow = iterations, ncol = numks)
-masterSpec = matrix(nrow = iterations, ncol = numks)
 
 trainIndices = sample(1:dim(autos4)[1],round(0.8 * dim(autos4)[1]),replace=F)
 testIndices = sample(1:dim(autos4)[1],round(0.1 * dim(autos4)[1]),replace=F)
 train=autos4[trainIndices,]
 test=autos4[testIndices,]
 
-classifications=knn(train,test,train$MSRP, prob = TRUE, k = 5)
-u=union(classifications,test$MSRP)
-CM = confusionMatrix(table(factor(classifications),factor(test$MSRP)))
-classifications
-CM 
+knn.fit<-train(MSRP~.,
+               data=train,
+               method="knn",preProcess = c("center","scale"),
+               trControl=fitControl,
+               tuneGrid=data.frame(k=c(1:10,15,20,25,30))
+)
 
-for(j in 1:iterations)
-{
-  accs = data.frame(accuracy = numeric(30), k = numeric(30))
-  trainIndices = sample(1:dim(autos4)[1],round(0.8 * dim(autos4)[1]),replace=F)
-  testIndices = sample(1:dim(autos4)[1],round(0.1 * dim(autos4)[1]),replace=F)
-  train=autos4[trainIndices,]
-  test=autos4[testIndices,]
-  for(i in 1:numks)
-  {
-    classifications = knn(train,test,train$MSRP, prob = TRUE, k = i)
-    u=union(classifications,test$MSRP)
-    table(factor(classifications,u),factor(test$MSRP,u))
-    CM = confusionMatrix(table(factor(classifications,u),factor(test$MSRP,u)))
-    masterAcc[j,i] = CM$overall[1]
-    masterSen[j,i] = CM$byClass[1]
-    masterSpec[j,i] = CM$byClass[2]
-  }
-}
-MeanAcc_KNN = colMeans(masterAcc)
-MeanSen_KNN = colMeans(masterSen)
-MeanSpec_KNN = colMeans(masterSpec)
-p=ggplot(mapping=aes(x=seq(1,numks,1), y=MeanAcc_KNN))+geom_line()
-ggplotly(p)
-MeanAcc_KNN
-MeanSen_KNN
-MeanSpec_KNN
+#Lets look at the CV result
+knn.fit
+
+
+plot(knn.fit)
+#Making predictions on the validation set
+knn.pred<-predict(knn.fit,test)
+
+#Computing Error Metrics
+knn.test<-postResample(pred=knn.pred,obs=test$MSRP)
+knn.test
+
+plot(knn.pred,test$MSRP)
+lines(0:2000,0:2000)
+
+#Ranking predictors
+varImp(knn.fit)
+plot(varImp(knn.fit))
+
+#------------Tree model--------------
+tree.fit<-train(MSRP~.,
+                data=train,
+                method="rpart",minsplit=5,
+                trControl=fitControl,
+                tuneGrid=data.frame(cp=c(.005,.0008,.01,.015,.02,.025,.03,.035,.04,.05,.06,.07,.08,.09,.25,.4))
+)
+
+#Lets look at the CV result
+tree.fit
+
+#If we want the final model tree
+plot(tree.fit$finalModel)
+text(tree.fit$finalModel)
+
+#prettier tree
+fancyRpartPlot(tree.fit$finalModel)
+
+
+#Making predictions on the validation set
+tree.pred<-predict(tree.fit,test)
+
+#Computing Error Metrics
+tree.test<-postResample(pred=tree.pred,obs=test$MSRP)
+tree.test
+
+plot(tree.pred,test$MSRP)
+lines(0:2000,0:2000)
+
+#Ranking predictors
+varImp(tree.fit)
+plot(varImp(tree.fit))
+
+#------KNN model looks better-----------
