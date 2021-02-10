@@ -418,6 +418,24 @@ plot(expm1(complex.pred),test$MSRP)
 lines(0:200000,0:200000)
 complex.RMSE
 
+#----------Try to add interaction items to make model more complex--------
+model_interaction=lm(log1p(MSRP)~poly(Engine.HP,6)+Transmission.Type+Driven_Wheels+Vehicle.Size+I(highway.MPG^5)
+                 +I(highway.MPG^4)+I(highway.MPG^3)+I(highway.MPG^2)+FactoryTuner
+                 +Luxury+FlexFuel+Hatchback+Make_new+Year_new+Vehicle.Style_new+Cylinders_new+
+                   Make_new:Engine.HP+Year_new:highway.MPG+Vehicle.Style_new:Popularity, data=train)
+summary(model_interaction)
+
+ols_plot_resid_fit(model_interaction)
+ols_plot_resid_lev(model_interaction)
+ols_plot_resid_qq(model_interaction)
+ols_plot_resid_hist(model_interaction)
+
+interaction.pred<-predict(model_interaction,test)
+
+interaction.RMSE<-sqrt(mean((test$MSRP-expm1(interaction.pred))^2))
+plot(expm1(interaction.pred),test$MSRP)
+lines(0:200000,0:200000)
+interaction.RMSE
 
 
 #Let's try to use LASSO method to build a model.
@@ -469,40 +487,19 @@ glmnet.RMSE2
 
 
 #------------------Let's try KNN--------------
-autos4= autos3 %>% mutate(FactoryTuner=ifelse(FactoryTuner=='Yes',1,0)) %>%
-  mutate(Luxury=ifelse(Luxury=='Yes',1,0)) %>% 
-  mutate(FlexFuel=ifelse(FlexFuel=='Yes',1,0)) %>% 
-  mutate(Diesel=ifelse(Diesel=='Yes',1,0)) %>% 
-  mutate(Hybrid=ifelse(Hybrid=='Yes',1,0)) %>% 
-  mutate(Crossover=ifelse(Crossover=='Yes',1,0)) %>% 
-  mutate(Performance=ifelse(Performance=='Yes',1,0)) %>% 
-  mutate(HighPerformance=ifelse(HighPerformance=='Yes',1,0)) %>% 
-  mutate(Transmission.Type=ifelse(Transmission.Type=='AUTOMATIC',1,0)) %>%
-  mutate(Hatchback=ifelse(Hatchback=='Yes',1,0))
-
-autos4$Transmission.Type = as.factor(autos4$Transmission.Type)
-autos4$Luxury = as.factor(autos4$Luxury)
-autos4$FlexFuel = as.factor(autos4$FlexFuel)
-autos4$Diesel = as.factor(autos4$Diesel)
-autos4$Hybrid = as.factor(autos4$Hybrid)
-autos4$Crossover = as.factor(autos4$Crossover)
-autos4$Performance = as.factor(autos4$Performance)
-autos4$HighPerformance = as.factor(autos4$HighPerformance)
-autos4$FactoryTuner = as.factor(autos4$FactoryTuner)
-autos4$Hatchback = as.factor(autos4$Hatchback)
 autos4$highway.MPG=as.numeric(autos4$highway.MPG)
 autos4$MSRP=as.numeric(autos4$MSRP)
 
 #Use numeric variables to run KNN.
-autos4 = autos4[,c('Engine.HP','highway.MPG','Popularity','MSRP')]
+autos5 = autos4[,c('Engine.HP','highway.MPG','Popularity','MSRP')]
 
 
 set.seed(1234)
 
-trainIndices = sample(1:dim(autos4)[1],round(0.8 * dim(autos4)[1]),replace=F)
-testIndices = sample(1:dim(autos4)[1],round(0.1 * dim(autos4)[1]),replace=F)
-train=autos4[trainIndices,]
-test=autos4[testIndices,]
+trainIndices = sample(1:dim(autos5)[1],round(0.8 * dim(autos5)[1]),replace=F)
+testIndices = sample(1:dim(autos5)[1],round(0.1 * dim(autos5)[1]),replace=F)
+train=autos5[trainIndices,]
+test=autos5[testIndices,]
 
 knn.fit<-train(MSRP~.,
                data=train,
@@ -516,7 +513,7 @@ knn.fit
 
 
 plot(knn.fit)
-#Making predictions on the validation set
+#Making predictions on the test set
 knn.pred<-predict(knn.fit,test)
 
 #Computing Error Metrics
@@ -529,6 +526,7 @@ lines(0:2000,0:2000)
 #Ranking predictors
 varImp(knn.fit)
 plot(varImp(knn.fit))
+
 
 #------------Tree model--------------
 tree.fit<-train(MSRP~.,
@@ -564,3 +562,32 @@ varImp(tree.fit)
 plot(varImp(tree.fit))
 
 #------KNN model looks better-----------
+
+#--------Try random forest--------
+#Don't run, it takes forever to run.
+mtry <- sqrt(ncol(train))
+tunegrid <- expand.grid(.mtry=mtry)
+
+RF.fit<-train(MSRP~.,
+               data=train,
+               method="rf",tuneGrid=tunegrid,
+               trControl=fitControl)
+
+
+RF.fit
+
+
+RF.pred<-predict(RF.fit,test)
+
+
+RF.test<-postResample(pred=RF.pred,obs=test$MSRP)
+RF.test
+
+plot(RF.pred,test$MSRP)
+lines(0:2000,0:2000)
+
+
+varImp(RF.fit)
+plot(varImp(RF.fit))
+
+
