@@ -107,7 +107,7 @@ summary(autos)
 str(autos)
 # replace all chr with factors
 autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], as.factor)
-autos$Year <- as.factor(autos$Year) # make Year into a factor
+
 str(autos)
 sapply(autos, function(x) sum(is.na(x)))
 # Engine.Fuel.Type - suzuki is missing
@@ -133,8 +133,15 @@ autos %>% ggplot(aes(x=Engine.HP,y=MSRP)) +geom_point()+geom_smooth(method='loes
 #Remove MSRP outliers
 autos = autos %>% filter(MSRP<=1000000)
 
-autos %>% ggplot(aes(x=Popularity,y=MSRP)) +geom_point()
+autos %>% ggplot(aes(x=Popularity,y=MSRP)) +geom_point() + facet_wrap(~Year)
 
+#autos %>% filter(Year<2001) %>% ggplot(aes(x=Engine.HP,y=MSRP)) +geom_point() + facet_wrap(~Year)
+#Most vesicles' MSRPs before year 2001 are around 2000. Let's check the data to see when MSRPs equal to 2000$
+#autos %>% filter(MSRP==2000) %>% ggplot(aes(x=Engine.HP,y=MSRP)) +geom_point() + facet_wrap(~Year)
+#So most vehicles' MSRP before year 2001 are set to be 2000$ arbitrary. So remove any vehicle year earlier than 2001.
+#autos = autos %>% filter(Year>2001)
+
+autos$Year <- as.factor(autos$Year) # make Year into a factor
 
 #Check VIF for full model, we have to remove aliased coefficients, Make, Model,popularity and Market category. 
 autos1<-autos[,-c(1,2,15,10)]  
@@ -401,8 +408,8 @@ ols_plot_resid_hist(model_cust)
 ols_plot_cooksd_bar(model_cust)
 
 #Let's try a complex model.
-model_complex=lm(log1p(MSRP)~poly(Engine.HP,6)+Transmission.Type+Driven_Wheels+Vehicle.Size+I(highway.MPG^5)
-                 +I(highway.MPG^4)+I(highway.MPG^3)+I(highway.MPG^2)+Popularity+FactoryTuner
+model_complex=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+
+                 Popularity+FactoryTuner+highway.MPG+Engine.HP
               +Luxury+FlexFuel+Hatchback+Make_new+Year_new+Vehicle.Style_new+Cylinders_new, data=train)
 summary(model_complex)
 vif(model_complex)[,3]^2
@@ -419,8 +426,7 @@ lines(0:200000,0:200000)
 complex.RMSE
 
 #----------Try to add interaction items to make model more complex--------
-model_interaction=lm(log1p(MSRP)~poly(Engine.HP,6)+Transmission.Type+Driven_Wheels+Vehicle.Size+I(highway.MPG^5)
-                 +I(highway.MPG^4)+I(highway.MPG^3)+I(highway.MPG^2)+FactoryTuner
+model_interaction=lm(log1p(MSRP)~Engine.HP+Transmission.Type+Driven_Wheels+Vehicle.Size+FactoryTuner+highway.MPG
                  +Luxury+FlexFuel+Hatchback+Make_new+Year_new+Vehicle.Style_new+Cylinders_new+
                    Make_new:Engine.HP+Year_new:highway.MPG+Vehicle.Style_new:Popularity, data=train)
 summary(model_interaction)
@@ -487,22 +493,19 @@ glmnet.RMSE2
 
 
 #------------------Let's try KNN--------------
-autos4$highway.MPG=as.numeric(autos4$highway.MPG)
-autos4$MSRP=as.numeric(autos4$MSRP)
-
 #Use numeric variables to run KNN.
-autos5 = autos4[,c('Engine.HP','highway.MPG','Popularity','MSRP')]
+autos5 = autos3[,c('Engine.HP','highway.MPG','Popularity','MSRP')]
 
 
 set.seed(1234)
 
 trainIndices = sample(1:dim(autos5)[1],round(0.8 * dim(autos5)[1]),replace=F)
 testIndices = sample(1:dim(autos5)[1],round(0.1 * dim(autos5)[1]),replace=F)
-train=autos5[trainIndices,]
-test=autos5[testIndices,]
+train_knn=autos5[trainIndices,]
+test_knn=autos5[testIndices,]
 
 knn.fit<-train(MSRP~.,
-               data=train,
+               data=train_knn,
                method="knn",preProcess = c("center","scale"),
                trControl=fitControl,
                tuneGrid=data.frame(k=c(1:10,15,20,25,30))
@@ -514,13 +517,13 @@ knn.fit
 
 plot(knn.fit)
 #Making predictions on the test set
-knn.pred<-predict(knn.fit,test)
+knn.pred<-predict(knn.fit,test_knn)
 
 #Computing Error Metrics
-knn.test<-postResample(pred=knn.pred,obs=test$MSRP)
+knn.test<-postResample(pred=knn.pred,obs=test_knn$MSRP)
 knn.test
 
-plot(knn.pred,test$MSRP)
+plot(knn.pred,test_knn$MSRP)
 lines(0:2000,0:2000)
 
 #Ranking predictors
@@ -530,7 +533,7 @@ plot(varImp(knn.fit))
 
 #------------Tree model--------------
 tree.fit<-train(MSRP~.,
-                data=train,
+                data=train_knn,
                 method="rpart",minsplit=5,
                 trControl=fitControl,
                 tuneGrid=data.frame(cp=c(.005,.0008,.01,.015,.02,.025,.03,.035,.04,.05,.06,.07,.08,.09,.25,.4))
@@ -548,13 +551,13 @@ fancyRpartPlot(tree.fit$finalModel)
 
 
 #Making predictions on the validation set
-tree.pred<-predict(tree.fit,test)
+tree.pred<-predict(tree.fit,test_knn)
 
 #Computing Error Metrics
-tree.test<-postResample(pred=tree.pred,obs=test$MSRP)
+tree.test<-postResample(pred=tree.pred,obs=test_knn$MSRP)
 tree.test
 
-plot(tree.pred,test$MSRP)
+plot(tree.pred,test_knn$MSRP)
 lines(0:2000,0:2000)
 
 #Ranking predictors
@@ -565,11 +568,11 @@ plot(varImp(tree.fit))
 
 #--------Try random forest--------
 #Don't run, it takes forever to run.
-mtry <- sqrt(ncol(train))
+mtry <- sqrt(ncol(train_knn))
 tunegrid <- expand.grid(.mtry=mtry)
 
 RF.fit<-train(MSRP~.,
-               data=train,
+               data=train_knn,
                method="rf",tuneGrid=tunegrid,
                trControl=fitControl)
 
@@ -577,13 +580,13 @@ RF.fit<-train(MSRP~.,
 RF.fit
 
 
-RF.pred<-predict(RF.fit,test)
+RF.pred<-predict(RF.fit,test_knn)
 
 
-RF.test<-postResample(pred=RF.pred,obs=test$MSRP)
+RF.test<-postResample(pred=RF.pred,obs=test_knn$MSRP)
 RF.test
 
-plot(RF.pred,test$MSRP)
+plot(RF.pred,test_knn$MSRP)
 lines(0:2000,0:2000)
 
 
