@@ -383,14 +383,22 @@ autos <- autos[,-c(model_index, hwy_index, city_index,
 names(autos)
 
 # rerun MANOVA
-EDA.model<-aov(MSRP~.,data=autos)
-summary(EDA.model)
+aov.model<-aov(MSRP~.,data=autos)
+summary(aov.model)
 
 # factory tuner and flexfuel also show to be insig
 flex_index <- which(colnames(autos)=="FlexFuel")
 tuner_index <- which(colnames(autos)=="FactoryTuner")
 autos <- autos[,-c(flex_index, tuner_index)] 
 names(autos)
+
+```
+
+# ### now split for selection
+
+
+```{r gets hairy here}
+
 
 #Before we start to use model selection method, let's run linear regression to find out insignificant factor levels - going to include make to see how it affects other categorical variables
 
@@ -456,6 +464,16 @@ autos$Transmission.Type <- as.factor(autos$Transmission.Type)
 #Now we can start to do EDA and fit a model.
 
 ready_for_eda_autos <- autos #new stopping point in case we get lost in the next code chunk
+
+```
+
+```{r simple model by hand}
+
+mod.simple <- lm(MSRP~., data=autos)
+summary(mod.simple)
+
+vif(aov(MSRP~., data=autos))
+
 
 ```
 
@@ -582,7 +600,7 @@ str(validate)
 ```{r Forward Selection}
 
 #---------Forward--------
-reg.fwd=regsubsets(log(MSRP)~., data=train, method="forward", nvmax=20)
+reg.fwd=regsubsets(MSRP~., data=train, method="forward", nvmax=20)
 #summary(reg.fwd)$adjr2
 #summary(reg.fwd)$rss
 #summary(reg.fwd)$bic
@@ -619,17 +637,17 @@ predict.regsubsets = function (object , newdata ,id ,...){
 }
 testASE<-c()
 
-for (i in 1:20){
+for (i in 1:21){
   predictions<-predict.regsubsets(object=reg.fwd,newdata=test,id=i) 
   testASE[i]<-mean((log1p(test$MSRP)-predictions)^2)
 }
 par(mfrow=c(1,1))
-  plot(1:20,testASE,type="l",xlab="# of predictors",ylab="test vs train ASE")
+  plot(1:21,testASE,type="l",xlab="# of predictors",ylab="test vs train ASE")
   index<-which(testASE==min(testASE))
   points(index,testASE[index],col="red",pch=10)
   rss<-summary(reg.fwd)$rss
-  lines(1:20,rss/nrow(train),lty=3,col="blue") 
-  #summary(reg.fwd)
+  lines(1:21,rss/nrow(train),lty=3,col="blue") 
+  coef(reg.fwd)
 
 ```
 
