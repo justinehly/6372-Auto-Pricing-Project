@@ -526,18 +526,7 @@ par(mfrow=c(1,1))
 ```
 
   
-```{r cust model}
-  model_cust=lm(log1p(MSRP)~Engine.HP+Transmission.Type+Driven_Wheels+Vehicle.Size+highway.MPG+Popularity+FactoryTuner
-              +Luxury+FlexFuel+Hatchback+Make_new+Year_new+Vehicle.Style_new+Cylinders_new, data=train)
-summary(model_cust)
-vif(model_cust)[,3]^2
-ols_plot_resid_fit(model_cust)
-ols_plot_resid_lev(model_cust)
-ols_plot_resid_qq(model_cust)
-ols_plot_resid_hist(model_cust)
-ols_plot_cooksd_bar(model_cust)
 
-```
 
 
 # ##### COMPLEX MODEL #####
