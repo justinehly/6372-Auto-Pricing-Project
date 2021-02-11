@@ -491,7 +491,7 @@ par(mfrow=c(1,1))
   points(index,testASE[index],col="red",pch=10)
   rss<-summary(reg.fwd)$rss
   lines(1:21,rss/nrow(train),lty=3,col="blue") 
-  coef(reg.fwd)
+  summary(reg.fwd)
 
 ```
 
@@ -609,6 +609,14 @@ plot(varImp(glmnet.fit))
 #Based on the ranking of the predictors, we have to remove some variables.
 #High way MPG, engine fuel type, engine HP,Popularity can be removed.
 #Then we run linear regression model again.
+```
+
+
+# Complex LASSO
+
+
+```{r complex lasso}
+
 model_afterlasso=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+FactoryTuner+Diesel+Hybrid+Crossover
               +Luxury+FlexFuel+Hatchback+Performance+HighPerformance+Make_new+Year_new+Vehicle.Style_new+Cylinders_new, data=train)
 summary(model_afterlasso)
@@ -626,11 +634,6 @@ plot(expm1(lasso_selected.pred),test$MSRP)
 lines(0:200000,0:200000)
 glmnet.RMSE2
 ```
-
-
-
-# ##### KNN #####
-
 
 
 # ##### TREE MODEL #####
