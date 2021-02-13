@@ -35,6 +35,7 @@ library(olsrr)
 library(plotly)
 library(scales)
 library(dplyr)
+library(car)
 
 ```
 
@@ -679,9 +680,8 @@ glmnet.test
 varImp(glmnet.fit)
 plot(varImp(glmnet.fit))
 
-
-plotDF <- data.frame(RF.pred, test$MSRP)
-plotDF %>% ggplot(aes(x=RF.pred, y=test$MSRP)) +
+plotLASSO <- data.frame(glmnet.pred, test$MSRP)
+plotLASSO %>% ggplot(aes(x=glmnet.pred, y=test$MSRP)) +
   geom_point(color="blue",show.legend = FALSE) +
   labs(title = "LASSO Plot of Actual Test MSRP vs Predicted MSRP",
        y = "Predicted MSRP",
@@ -690,6 +690,12 @@ plotDF %>% ggplot(aes(x=RF.pred, y=test$MSRP)) +
   scale_x_continuous(label=dollar_format()) +
   geom_abline(color="red") +
   theme_bw()
+
+
+#Validation Set
+glmnet.pred1<-predict(glmnet.fit,validate)
+glmnet.validate<-postResample(pred = expm1(glmnet.pred1), obs = validate$MSRP)                
+glmnet.validate
 
 #Based on the ranking of the predictors, we have to remove some variables.
 #High way MPG, engine fuel type, engine HP,Popularity can be removed.
@@ -702,8 +708,7 @@ plotDF %>% ggplot(aes(x=RF.pred, y=test$MSRP)) +
 
 ```{r complex lasso}
 set.seed(123)
-model_afterlasso=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+Hybrid
-              +Hatchback + (Engine.HP)^2*(Engine.HP)^3, data=train)
+model_afterlasso=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+(Engine.HP)^2*(Engine.HP)^3, data=train)
 summary(model_afterlasso)
 vif(model_afterlasso)[,3]^2
 ols_plot_resid_fit(model_afterlasso)
@@ -718,8 +723,18 @@ glmnet.RMSE2<-sqrt(mean((test$MSRP-expm1(lasso_selected.pred))^2))
 plot(expm1(lasso_selected.pred),test$MSRP)
 lines(0:200000,0:200000)
 glmnet.RMSE2
-```
 
+#Validation
+lasso_selected.pred1<-predict(model_afterlasso,validate)
+glmnet.RMSE2.1<-sqrt(mean((validate$MSRP-expm1(lasso_selected.pred1))^2))
+
+glmnet.RMSE2.1
+```
+```{r}
+#Hypothesis test simple and complex models
+
+
+```
 
 # ##### TREE MODEL #####
   
@@ -743,7 +758,7 @@ plot(tree.fit$finalModel)
 text(tree.fit$finalModel)
 
 #prettier tree
-fancyRpartPlot(tree.fit$finalModel)
+#fancyRpartPlot(tree.fit$finalModel)
 
 
 #Making predictions on the validation set
@@ -760,7 +775,13 @@ lines(0:2000,0:2000)
 varImp(tree.fit)
 plot(varImp(tree.fit))
 
+#Validate
+#Making predictions on the validation set
+tree.pred1<-predict(tree.fit,validate)
 
+#Computing Error Metrics
+tree.validate<-postResample(pred=tree.pred1,obs=validate$MSRP)
+tree.validate
 
 ```
 
@@ -779,7 +800,7 @@ RF.fit<-train(MSRP~.,
 
 
 RF.fit
-
+print(RF.fit)
 
 RF.pred<-predict(RF.fit,test)
 
@@ -787,14 +808,32 @@ RF.pred<-predict(RF.fit,test)
 RF.test<-postResample(pred=RF.pred,obs=test$MSRP)
 RF.test
 
-plot(RF.pred,test_knn$MSRP)
-lines(0:2000,0:2000)
+#plot(RF.pred,test_knn$MSRP)
+#lines(0:2000,0:2000)
 
 
 varImp(RF.fit)
 plot(varImp(RF.fit))
 
 
+plotDF <- data.frame(RF.pred, test$MSRP)
+plotDF %>% ggplot(aes(x=RF.pred, y=test$MSRP)) +
+  geom_point(color="blue",show.legend = FALSE) +
+  labs(title = "R.F. Plot of Actual Test MSRP vs Predicted MSRP",
+       y = "Predicted MSRP",
+       x = "Test MSRP") +
+  scale_y_continuous(label=dollar_format()) +
+  scale_x_continuous(label=dollar_format()) +
+  geom_abline(color="red") +
+  theme_bw()
+
+
+#Validate
+RF.pred1<-predict(RF.fit,validate)
+
+
+RF.validate<-postResample(pred=RF.pred1,obs=validate$MSRP)
+RF.validate
 ```
 
 # End of code
