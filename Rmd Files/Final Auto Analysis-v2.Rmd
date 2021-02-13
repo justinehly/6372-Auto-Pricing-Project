@@ -42,7 +42,7 @@ library(dplyr)
 # setwd("C:/Users/wrf0/Documents/SMU Data Science Program/Applied Statistics/Project 1")
 #setwd(choose.dir()) #this only works on a windows machine
 
-auto_data <- read.csv("data1.csv")
+auto_data <- read.csv("/Users/allenmiller/Documents/GitHub/6372-Auto-Pricing-Project/DataSets/data1.csv")
 head(auto_data)
 str(auto_data)
 autos <- auto_data
@@ -148,7 +148,7 @@ autos$Engine.HP[c(8375:8376)] <- 154
 #Telsa Model S missing values
 autos %>% filter(Make == "Tesla")
 
-tesla <- read.csv("tesla.csv")
+tesla <- read.csv("/Users/allenmiller/Documents/GitHub/6372-Auto-Pricing-Project/DataSets/tesla.csv")
 #view(tesla)
 
 # mass replace tesla missing values since they were mostly all independent
@@ -678,6 +678,18 @@ glmnet.test
 #Ranking of the predictors
 varImp(glmnet.fit)
 plot(varImp(glmnet.fit))
+
+
+plotDF <- data.frame(RF.pred, test$MSRP)
+plotDF %>% ggplot(aes(x=RF.pred, y=test$MSRP)) +
+  geom_point(color="blue",show.legend = FALSE) +
+  labs(title = "LASSO Plot of Actual Test MSRP vs Predicted MSRP",
+       y = "Predicted MSRP",
+       x = "Test MSRP") +
+  scale_y_continuous(label=dollar_format()) +
+  scale_x_continuous(label=dollar_format()) +
+  geom_abline(color="red") +
+  theme_bw()
 
 #Based on the ranking of the predictors, we have to remove some variables.
 #High way MPG, engine fuel type, engine HP,Popularity can be removed.
