@@ -19,6 +19,7 @@ library(tidyr)
 library(stringi)
 library(rvest) 
 library(ggplot2)
+library(GGally)
 library(gridExtra)
 library(naniar)
 library(glmnet)
@@ -41,10 +42,14 @@ library(dplyr)
 # setwd("C:/Users/wrf0/Documents/SMU Data Science Program/Applied Statistics/Project 1")
 #setwd(choose.dir()) #this only works on a windows machine
 
-auto_data <- read.csv("/Users/allenmiller/Documents/GitHub/6372-Auto-Pricing-Project/DataSets/data1.csv")
+auto_data <- read.csv("data1.csv")
 head(auto_data)
 str(auto_data)
 autos <- auto_data
+
+# Product summary table
+ #summary.auto.df <- data.frame(summary(auto_data))
+ #write.csv(summary.auto.df, 'summaryAutoDF.csv')
 
 ```
 
@@ -143,7 +148,7 @@ autos$Engine.HP[c(8375:8376)] <- 154
 #Telsa Model S missing values
 autos %>% filter(Make == "Tesla")
 
-tesla <- read.csv("/Users/allenmiller/Documents/GitHub/6372-Auto-Pricing-Project/DataSets/tesla.csv")
+tesla <- read.csv("tesla.csv")
 #view(tesla)
 
 # mass replace tesla missing values since they were mostly all independent
@@ -231,16 +236,16 @@ autos$Transmission.Type[c(6367,6369)] <- "AUTOMATIC" #1993 Chrysler LeBaron
 autos$Transmission.Type[c(8043,8044,8047:8050,8052,8054)] <- "AUTOMATIC" #1991 Dodge Ram 150
 
 #Let's separate vehicle market category column first.
-autos=autos %>% mutate(FactoryTuner=ifelse(grepl('Factory Tuner',Market.Category),'Yes','No')) %>%
-  mutate(Luxury=ifelse(grepl('Luxury',Market.Category),'Yes','No')) %>%
-  mutate(FlexFuel=ifelse(grepl('Flex Fuel',Market.Category),'Yes','No')) %>%
-  mutate(Hatchback=ifelse(grepl('Hatchback',Market.Category),'Yes','No')) %>%
-  mutate(Diesel=ifelse(grepl('Diesel',Market.Category),'Yes','No')) %>%
-  mutate(Hybrid=ifelse(grepl('Hybrid',Market.Category),'Yes','No')) %>%
-  mutate(Exotic=ifelse(grepl('Exotic',Market.Category),'Yes','No')) %>%
-  mutate(Crossover=ifelse(grepl('Crossover',Market.Category),'Yes','No')) %>%
-  mutate(Performance=ifelse(grepl('\\b,Performance\\b|^Performance',Market.Category),'Yes','No')) %>%
-  mutate(HighPerformance=ifelse(grepl('High-Performance',Market.Category),'Yes','No'))
+#autos=autos %>% mutate(FactoryTuner=ifelse(grepl('Factory Tuner',Market.Category),'Yes','No')) %>%
+#  mutate(Luxury=ifelse(grepl('Luxury',Market.Category),'Yes','No')) %>%
+#  mutate(FlexFuel=ifelse(grepl('Flex Fuel',Market.Category),'Yes','No')) %>%
+#  mutate(Hatchback=ifelse(grepl('Hatchback',Market.Category),'Yes','No')) %>%
+#  mutate(Diesel=ifelse(grepl('Diesel',Market.Category),'Yes','No')) %>%
+#  mutate(Hybrid=ifelse(grepl('Hybrid',Market.Category),'Yes','No')) %>%
+#  mutate(Exotic=ifelse(grepl('Exotic',Market.Category),'Yes','No')) %>%
+#  mutate(Crossover=ifelse(grepl('Crossover',Market.Category),'Yes','No')) %>%
+#  mutate(Performance=ifelse(grepl('\\b,Performance\\b|^Performance',Market.Category),'Yes','No')) %>%
+#  mutate(HighPerformance=ifelse(grepl('High-Performance',Market.Category),'Yes','No'))
 autos[sapply(autos,is.character)] <- lapply(autos[sapply(autos,is.character)], as.factor)
 
 # Remove Market.Category column
@@ -267,7 +272,7 @@ clean_autos <- autos  # Safe place to pick back up if we get lost in the EDA
 autos <- clean_autos
 #attach(autos)
 
-autos <- autos[,c(15,1:14,16:25)] #put MSRP first
+autos <- autos[,c(15,1:14,16)] #put MSRP first
 names(autos)
 
 
@@ -290,8 +295,9 @@ autos$Year <- case_when(
     TRUE ~ autos$Year)
 autos$Year <- as.factor(autos$Year)
 
-autos %>% select(Year, MSRP) %>% group_by(Year) %>%
-  summarize(max=max(MSRP),mean=mean(MSRP), min=min(MSRP))
+write.csv(autos %>% select(Year, MSRP) %>% group_by(Year) %>%
+  summarize(minMSRP=min(MSRP) ,meanMSRP=mean(MSRP), maxMSRP=max(MSRP)), "MSRP Ranges by Year.csv")
+
 
 # Graph the difference between cars 2000 and under and 2001 and over
 autos %>% select(MSRP, Year) %>% filter(MSRP < 100000) %>%
@@ -318,13 +324,13 @@ str(autos) #summary of main autos df
 ### Make ###
 t(aggregate(Popularity~Make,data=auto_data,min)) #appears each make has a specific popularity
 autos %>% dplyr::group_by(Make) %>% 
-  summarise(mean = mean(Popularity), range=range(Popularity)) %>%
-  ggplot(aes(x=Make, y=mean, fill=Make)) +
-  geom_col(show.legend = FALSE) +
-  labs(title = "Average Popularity Score by Make",
-       y = "Averge Popularity", 
+  summarise(distinct = n_distinct(Popularity)) %>%
+  ggplot(aes(x=Make, y=distinct)) +
+  geom_col(aes(fill = Make), show.legend = FALSE) +
+  labs(title = "Unique Popularity Scores by Make",
+       y = "Unique Popularity Scores", 
        x = "Car Make") + 
-  scale_y_continuous(label=comma) +
+  scale_y_continuous(breaks=c(1,2,3)) +
   coord_flip() +
   theme_bw()
 
@@ -333,7 +339,7 @@ auto_data %>% dplyr::group_by(Make) %>%
        summarize(min=min(Popularity),
                  mean=mean(Popularity), 
                  median=median(Popularity),
-                 max=max(Popularity)) %>% View
+                 max=max(Popularity)) # %>% View
 # Confirmed, Popularity is directly tied to Make, they are interchangeable and thus we only need to use one of them
 
 # remove popularity
@@ -347,6 +353,9 @@ names(autos)
 #Check horsepower and MSRP, there are some outliers. 
 autos %>% ggplot(aes(x=Engine.HP,y=MSRP)) + 
   geom_point() + geom_smooth(method='loess') + 
+  labs( title = "MSPR vs Horsepower",
+        xlab = "Engine Horsepower",
+        ylab = "Auto Make") +
   scale_y_continuous(labels=dollar) + 
   theme_bw()
 
@@ -356,54 +365,43 @@ autos = autos %>% filter(MSRP<=1000000)
 #Check horsepower and MSRP, there are some outliers. 
 autos %>% ggplot(aes(x=Engine.HP,y=MSRP)) + 
   geom_point(color="blue") + geom_smooth(color = "red", method='loess') + 
-  labs( title = "MSRP vs Engine.HP",
-        xlab = "Engine HP",
+  labs( title = "MSRP vs Engine Horsepower where MSRP < $1,000,000",
+        xlab = "Engine Horsepower",
         yalb = "MSRP") +
   scale_y_continuous(labels=dollar) + 
   theme_bw()
 
-
+# ggpairs for HP, MPG MSRP
+autos %>% select(MSRP, Engine.HP, highway.MPG, city.mpg) %>% 
+  ggpairs() + 
+  labs(title = "Grid to visually inspect for any correlation between continuous variables",
+       caption = "No MSRP's removed, full data set")
 
 # let's run an manova
-EDA.model<-aov(MSRP~.,data=autos)
-summary(EDA.model)
-# doors, highway.MPG, city.mpg, luxury, flexfuel, diesel, crossover, performance and highperformance 
-# are all insig
+aov.model<-aov(MSRP~.,data=autos)
+summary(aov.model)
+# doors, highway.MPG, city.mpg are all insig
 # model just has too many levels to work with.
 
 model_index <- which( colnames(autos)=="Model" ) # find the index of the Popularity column
 hwy_index <- which( colnames(autos)=="highway.MPG" )
 city_index <- which( colnames(autos)=="city.mpg")
 doors_index <- which(colnames(autos)=="Number.of.Doors")
-year_index <- which(colnames(autos)=="Year")
-lux_index <- which(colnames(autos)=="Luxury")
-die_index <- which(colnames(autos)=="Diesel")
-cross_index <- which(colnames(autos)=="Crossover")
-pef_index <- which(colnames(autos)=="Performance")
-hiper_index <- which(colnames(autos)=="HighPerformance")
+
 
 autos <- autos[,-c(model_index, hwy_index, city_index, 
-                   doors_index, year_index, lux_index,
-                   die_index, cross_index, pef_index, hiper_index)]
+                  doors_index)]
 names(autos)
 
-# rerun MANOVA
+# rerun ANOVA
 aov.model<-aov(MSRP~.,data=autos)
 summary(aov.model)
 
-# factory tuner and flexfuel also show to be insig
-flex_index <- which(colnames(autos)=="FlexFuel")
-tuner_index <- which(colnames(autos)=="FactoryTuner")
-autos <- autos[,-c(flex_index, tuner_index)] 
-names(autos)
+
 
 ```
 
-```{r EDA}
 
-autos %>% select(MSRP, )
-
-```
 
 # ### now split for selection
 
@@ -442,13 +440,14 @@ str(validate)
 
 
 ```{r Forward Selection}
-
+set.seed(123)
 #---------Forward--------
-reg.fwd=regsubsets(log1p(MSRP)~., data=train, method="forward", nvmax=20)
+reg.fwd=regsubsets(log1p(MSRP)~., data=train, method="forward", nvmax=116)
 #summary(reg.fwd)$adjr2
 #summary(reg.fwd)$rss
 #summary(reg.fwd)$bic
 
+par(mfrow=c(3,1))
 bics<-summary(reg.fwd)$bic
   plot(bics,type="l",ylab="BIC",xlab="# of predictors")
 index<-which(bics==min(bics))
@@ -456,7 +455,7 @@ index<-which(bics==min(bics))
   print("Min Bics is:")
   which(bics==min(bics))
 
-# Adjr2
+# AdjR^2
 adjr2<-summary(reg.fwd)$adjr2
   plot(adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
 index<-which(adjr2==max(adjr2))
@@ -481,42 +480,119 @@ predict.regsubsets = function (object , newdata ,id ,...){
 }
 testASE<-c()
 
-for (i in 1:21){
+predictors <- reg.fwd$nvmax - 1
+
+for (i in 1:predictors){
   predictions<-predict.regsubsets(object=reg.fwd,newdata=test,id=i) 
   testASE[i]<-mean((log1p(test$MSRP)-predictions)^2)
 }
 par(mfrow=c(1,1))
-  plot(1:21,testASE,type="l",xlab="# of predictors",ylab="test vs train ASE")
+  plot(1:predictors,testASE,type="l",
+       main = "Forward Selection Test vs Train ASE",
+       xlab="# of Predictors",
+       ylab="Test vs Train ASE")
   index<-which(testASE==min(testASE))
   points(index,testASE[index],col="red",pch=10)
   rss<-summary(reg.fwd)$rss
-  lines(1:21,rss/nrow(train),lty=3,col="blue") 
+  lines(1:predictors,rss/nrow(train),lty=3,col="blue") 
   summary(reg.fwd)
+
+
+```
+
+# ##### BACKWARD SELECTION #####
+
+
+```{r Backward Selection}
+set.seed(123)
+#---------Forward--------
+reg.bwd=regsubsets(log1p(MSRP)~., data=train, method="backward", nvmax=116)
+#summary(reg.bwd)$adjr2
+#summary(reg.bwd)$rss
+#summary(reg.bwd)$bic
+
+par(mfrow=c(3,1))
+bics<-summary(reg.bwd)$bic
+  plot(bics,type="l",ylab="BIC",xlab="# of predictors")
+index<-which(bics==min(bics))
+  points(index,bics[index],col="red",pch=10)
+  print("Min Bics is:")
+  which(bics==min(bics))
+
+# AdjR^2
+adjr2<-summary(reg.bwd)$adjr2
+  plot(adjr2,type="l",ylab="Adjusted R-squared",xlab="# of predictors")
+index<-which(adjr2==max(adjr2))
+  points(index,adjr2[index],col="red",pch=10)
+  print("Max Adj R2 is:")
+  which(adjr2==max(adjr2))
+
+MallowCP <- summary(reg.bwd)$cp
+  plot(MallowCP,type="l",ylab="Mallow's CP",xlab="# of predictors")
+index<-which(MallowCP==min(MallowCP))
+  points(index,MallowCP[index],col="red",pch=10)
+  print("Min Mallow CP is:")
+  which(MallowCP==min(MallowCP))
+
+
+predict.regsubsets = function (object , newdata ,id ,...){
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form ,newdata )
+  coefi=coef(object ,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+testASE<-c()
+
+predictors <- reg.bwd$nvmax - 1
+
+for (i in 1:predictors){
+  predictions<-predict.regsubsets(object=reg.bwd,newdata=test,id=i) 
+  testASE[i]<-mean((log1p(test$MSRP)-predictions)^2)
+}
+par(mfrow=c(1,1))
+  plot(1:predictors,testASE,type="l",
+       main = "Backward Selection Test vs Train ASE",
+       xlab="# of Predictors",
+       ylab="Test vs Train ASE")
+  index<-which(testASE==min(testASE))
+  points(index,testASE[index],col="red",pch=10)
+  rss<-summary(reg.bwd)$rss
+  lines(1:predictors,rss/nrow(train),lty=3,col="blue") 
+  summary(reg.bwd)
+reg.bwd$
+
 
 ```
 
 
-
+### !!WARNING!!  !!WARNING!!  !!WARNING!!  !!WARNING!!  ###
 # ##### STEPWISE SELECTION #####
+
+#### !!USE AT YOUR OWN RISK!! #####
 
 
 ```{r stepwise selection}
-
-reg.stp=regsubsets(log1p(MSRP)~., data=train, method="seqrep", nvmax=20)
+set.seed(123)
+reg.stp=regsubsets(log1p(MSRP)~., data=train, method="seqrep", nvmax=116)
 testASE<-c()
 
-for (i in 1:20){
+predictors = reg.stp$nvmax - 1
+for (i in 1:predictors){
   predictions<-predict.regsubsets(object=reg.stp,newdata=test,id=i) 
-  testASE[i]<-mean((log1p(test$MSRP)-predictions)^2)
-}
+  testASE[i]<-mean((log1p(test$MSRP)-predictions)^2)}
+
 par(mfrow=c(1,1))
-  plot(testASE,type="l",xlab="# of predictors",ylab="test vs train ASE")
-  index<-which(testASE==min(testASE))
+  plot(1:predictors,testASE,type="l",
+       main = "Stepwise Selection Test vs Train ASE",
+       xlab="# of predictors",
+       ylab="test vs train ASE")
+  index <- which(testASE==min(testASE))
   points(index,testASE[index],col="red",pch=10)
   rss<-summary(reg.stp)$rss
   lines(rss/nrow(train),lty=3,col="blue") 
 
-  coef(reg.stp)
+  coef(reg.stp, 1)
   #summary(reg.stp)
 
   #Looks like stepwise method gave a better result, but still need some improvement.
@@ -525,8 +601,6 @@ par(mfrow=c(1,1))
 #Popularity, factory Tune, Luxury, Flex Fuel, Hatchback, Make_new, Year_new, Vehicle style and cylinders new
 ```
 
-  
-
 
 
 # ##### COMPLEX MODEL #####
@@ -534,7 +608,7 @@ par(mfrow=c(1,1))
 
 
 ```{r complex model}
-
+set.seed(123)
 #Let's try a complex model.
 model_complex=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+
                  Engine.HP+Hatchback, data=train)
@@ -577,6 +651,7 @@ interaction.RMSE
 
 
 ```{r LASSO}
+set.seed(123)
 #Let's try to use LASSO method to build a model.
 fitControl<-trainControl(method="repeatedcv",number=10,repeats=10)
 glmnet.fit<-train(log1p(MSRP)~.,
@@ -614,7 +689,7 @@ plot(varImp(glmnet.fit))
 
 
 ```{r complex lasso}
-
+set.seed(123)
 model_afterlasso=lm(log1p(MSRP)~Transmission.Type+Driven_Wheels+Vehicle.Size+Hybrid
               +Hatchback + (Engine.HP)^2*(Engine.HP)^3, data=train)
 summary(model_afterlasso)
@@ -639,7 +714,7 @@ glmnet.RMSE2
   
   
 ```{r tree model}
-
+set.seed(123)
 #------------Tree model--------------
 tree.fit<-train(MSRP~.,
                 data=train,
@@ -679,6 +754,7 @@ plot(varImp(tree.fit))
 
 
 ```{r Random Forest}
+set.seed(123)
 #--------Try random forest--------
 #Don't run, it takes forever to run.
 mtry <- sqrt(ncol(train))

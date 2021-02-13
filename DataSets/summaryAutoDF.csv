@@ -1,0 +1,113 @@
+"","Var1","Var2","Freq"
+"1","","    Make","Length:11914      "
+"2","","    Make","Class :character  "
+"3","","    Make","Mode  :character  "
+"4","","    Make",NA
+"5","","    Make",NA
+"6","","    Make",NA
+"7","","    Make",NA
+"8","","   Model","Length:11914      "
+"9","","   Model","Class :character  "
+"10","","   Model","Mode  :character  "
+"11","","   Model",NA
+"12","","   Model",NA
+"13","","   Model",NA
+"14","","   Model",NA
+"15","","     Year","Min.   :1990  "
+"16","","     Year","1st Qu.:2007  "
+"17","","     Year","Median :2015  "
+"18","","     Year","Mean   :2010  "
+"19","","     Year","3rd Qu.:2016  "
+"20","","     Year","Max.   :2017  "
+"21","","     Year",NA
+"22","","Engine.Fuel.Type","Length:11914      "
+"23","","Engine.Fuel.Type","Class :character  "
+"24","","Engine.Fuel.Type","Mode  :character  "
+"25","","Engine.Fuel.Type",NA
+"26","","Engine.Fuel.Type",NA
+"27","","Engine.Fuel.Type",NA
+"28","","Engine.Fuel.Type",NA
+"29","","  Engine.HP","Min.   :  55.0  "
+"30","","  Engine.HP","1st Qu.: 170.0  "
+"31","","  Engine.HP","Median : 227.0  "
+"32","","  Engine.HP","Mean   : 249.4  "
+"33","","  Engine.HP","3rd Qu.: 300.0  "
+"34","","  Engine.HP","Max.   :1001.0  "
+"35","","  Engine.HP","NA's   :69  "
+"36","","Engine.Cylinders","Min.   : 0.000  "
+"37","","Engine.Cylinders","1st Qu.: 4.000  "
+"38","","Engine.Cylinders","Median : 6.000  "
+"39","","Engine.Cylinders","Mean   : 5.629  "
+"40","","Engine.Cylinders","3rd Qu.: 6.000  "
+"41","","Engine.Cylinders","Max.   :16.000  "
+"42","","Engine.Cylinders","NA's   :30  "
+"43","","Transmission.Type","Length:11914      "
+"44","","Transmission.Type","Class :character  "
+"45","","Transmission.Type","Mode  :character  "
+"46","","Transmission.Type",NA
+"47","","Transmission.Type",NA
+"48","","Transmission.Type",NA
+"49","","Transmission.Type",NA
+"50","","Driven_Wheels","Length:11914      "
+"51","","Driven_Wheels","Class :character  "
+"52","","Driven_Wheels","Mode  :character  "
+"53","","Driven_Wheels",NA
+"54","","Driven_Wheels",NA
+"55","","Driven_Wheels",NA
+"56","","Driven_Wheels",NA
+"57","","Number.of.Doors","Min.   :2.000  "
+"58","","Number.of.Doors","1st Qu.:2.000  "
+"59","","Number.of.Doors","Median :4.000  "
+"60","","Number.of.Doors","Mean   :3.436  "
+"61","","Number.of.Doors","3rd Qu.:4.000  "
+"62","","Number.of.Doors","Max.   :4.000  "
+"63","","Number.of.Doors","NA's   :6  "
+"64","","Market.Category","Length:11914      "
+"65","","Market.Category","Class :character  "
+"66","","Market.Category","Mode  :character  "
+"67","","Market.Category",NA
+"68","","Market.Category",NA
+"69","","Market.Category",NA
+"70","","Market.Category",NA
+"71","","Vehicle.Size","Length:11914      "
+"72","","Vehicle.Size","Class :character  "
+"73","","Vehicle.Size","Mode  :character  "
+"74","","Vehicle.Size",NA
+"75","","Vehicle.Size",NA
+"76","","Vehicle.Size",NA
+"77","","Vehicle.Size",NA
+"78","","Vehicle.Style","Length:11914      "
+"79","","Vehicle.Style","Class :character  "
+"80","","Vehicle.Style","Mode  :character  "
+"81","","Vehicle.Style",NA
+"82","","Vehicle.Style",NA
+"83","","Vehicle.Style",NA
+"84","","Vehicle.Style",NA
+"85",""," highway.MPG","Min.   : 12.00  "
+"86",""," highway.MPG","1st Qu.: 22.00  "
+"87",""," highway.MPG","Median : 26.00  "
+"88",""," highway.MPG","Mean   : 26.64  "
+"89",""," highway.MPG","3rd Qu.: 30.00  "
+"90",""," highway.MPG","Max.   :354.00  "
+"91",""," highway.MPG",NA
+"92","","   city.mpg","Min.   :  7.00  "
+"93","","   city.mpg","1st Qu.: 16.00  "
+"94","","   city.mpg","Median : 18.00  "
+"95","","   city.mpg","Mean   : 19.73  "
+"96","","   city.mpg","3rd Qu.: 22.00  "
+"97","","   city.mpg","Max.   :137.00  "
+"98","","   city.mpg",NA
+"99","","  Popularity","Min.   :   2  "
+"100","","  Popularity","1st Qu.: 549  "
+"101","","  Popularity","Median :1385  "
+"102","","  Popularity","Mean   :1555  "
+"103","","  Popularity","3rd Qu.:2009  "
+"104","","  Popularity","Max.   :5657  "
+"105","","  Popularity",NA
+"106","","     MSRP","Min.   :   2000  "
+"107","","     MSRP","1st Qu.:  21000  "
+"108","","     MSRP","Median :  29995  "
+"109","","     MSRP","Mean   :  40595  "
+"110","","     MSRP","3rd Qu.:  42231  "
+"111","","     MSRP","Max.   :2065902  "
+"112","","     MSRP",NA
