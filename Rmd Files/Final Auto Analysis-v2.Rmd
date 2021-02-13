@@ -667,6 +667,7 @@ coef(glmnet.fit$finalModel,glmnet.fit$finalModel$lambdaOpt)
 
 glmnet.pred<-predict(glmnet.fit,test)
 
+
 glmnet.RMSE<-sqrt(mean((test$MSRP-expm1(glmnet.pred))^2))
 plot(expm1(glmnet.pred),test$MSRP)
 lines(0:200000,0:200000)
@@ -729,11 +730,6 @@ lasso_selected.pred1<-predict(model_afterlasso,validate)
 glmnet.RMSE2.1<-sqrt(mean((validate$MSRP-expm1(lasso_selected.pred1))^2))
 
 glmnet.RMSE2.1
-```
-```{r}
-#Hypothesis test simple and complex models
-
-
 ```
 
 # ##### TREE MODEL #####
